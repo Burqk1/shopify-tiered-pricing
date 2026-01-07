@@ -1,0 +1,74 @@
+{
+  "tier_table": {
+    "title": "Remises sur Volume",
+    "quantity": "Quantité",
+    "discount": "Remise",
+    "price": "Prix",
+    "you_save": "Vous économisez",
+    "best_value": "Meilleure Offre",
+    "buy_more_save_more": "Achetez plus, économisez plus!",
+    "add_items": "Ajoutez {{ count }} de plus pour {{ discount }} de remise",
+    "units": "unités",
+    "per_item": "par article",
+    "off": "de réduction"
+  },
+  "countdown_timer": {
+    "sale_ends": "La vente se termine dans:",
+    "days": "Jours",
+    "hours": "Heures",
+    "mins": "Min",
+    "secs": "Sec",
+    "expired": "La vente est terminée",
+    "hurry": "Dépêchez-vous! Offre limitée"
+  },
+  "free_shipping": {
+    "progress": "Ajoutez {{ amount }} pour la LIVRAISON GRATUITE!",
+    "success": "Félicitations! Vous avez débloqué la LIVRAISON GRATUITE!",
+    "empty": "Ajoutez {{ amount }} pour la LIVRAISON GRATUITE!",
+    "free": "GRATUIT",
+    "shipping": "Livraison"
+  },
+  "cart_upsell": {
+    "title": "Complétez Votre Commande",
+    "subtitle": "Ajoutez ces articles et économisez!",
+    "add_to_cart": "Ajouter au Panier",
+    "added": "Ajouté!",
+    "bundle_save": "PACK & ÉCONOMISEZ",
+    "frequently_bought": "Fréquemment Achetés Ensemble",
+    "you_may_like": "Vous aimerez peut-être aussi"
+  },
+  "general": {
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer"
+  },
+  "spin_wheel": {
+    "badge": "Offre limitée",
+    "title": "Tournez & Gagnez!",
+    "subtitle": "Tentez votre chance et gagnez des réductions incroyables!",
+    "email_placeholder": "Votre adresse e-mail",
+    "phone_placeholder": "Numéro de téléphone (optionnel)",
+    "spin_button": "TOURNER LA ROUE",
+    "terms": "En tournant, vous acceptez de recevoir des e-mails marketing.",
+    "win_title": "Félicitations!",
+    "win_message": "Utilisez ce code à la caisse pour réclamer votre prix!",
+    "coupon_label": "Votre Code de Réduction",
+    "copy_button": "Copier le Code",
+    "copied": "Copié!",
+    "shop_now": "Acheter Maintenant",
+    "trigger_text": "Tournez & Gagnez!"
+  },
+  "post_purchase": {
+    "headline": "Attendez! Offre spéciale juste pour vous",
+    "subheadline": "Ajoutez ceci à votre commande maintenant et économisez!",
+    "cta_button": "Ajouter à la commande - Un clic",
+    "decline": "Non merci",
+    "timer_prefix": "L'offre expire dans:",
+    "secure": "Paiement sécurisé",
+    "no_extra_payment": "Pas de paiement supplémentaire",
+    "ships_together": "Livré avec votre commande",
+    "added": "Ajouté à votre commande!"
+  }
+}

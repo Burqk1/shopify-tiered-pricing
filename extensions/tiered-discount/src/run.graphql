@@ -1,0 +1,26 @@
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      merchandise {
+        __typename
+        ... on ProductVariant {
+          id
+          product {
+            id
+            hasAnyTag(tags: ["tiered-discount"])
+            metafield(namespace: "tiered_pricing", key: "tiers") {
+              value
+            }
+          }
+        }
+      }
+    }
+  }
+  discountNode {
+    metafield(namespace: "$app:tiered-discount", key: "function-configuration") {
+      value
+    }
+  }
+}

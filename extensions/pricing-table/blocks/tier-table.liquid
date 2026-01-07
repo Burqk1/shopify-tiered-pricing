@@ -1,0 +1,400 @@
+{% comment %}
+  Tiered Pricing Table Block
+  Displays volume discount tiers on product pages
+
+  Features:
+  - Fetches pricing data from app proxy
+  - Responsive table design
+  - Customizable colors and styling
+  - "Powered by" attribution for free plan
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Volume Discount Table",
+  "target": "section",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Table Title",
+      "default": "Volume Discounts"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Save more when you buy more!"
+    },
+    {
+      "type": "color",
+      "id": "header_bg_color",
+      "label": "Header Background",
+      "default": "#f3f4f6"
+    },
+    {
+      "type": "color",
+      "id": "header_text_color",
+      "label": "Header Text Color",
+      "default": "#374151"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "Best Deal Highlight",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e5e7eb"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_unit_price",
+      "label": "Show Unit Price Column",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_savings",
+      "label": "Show Savings Column",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "highlight_best_deal",
+      "label": "Highlight Best Deal",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "Show Powered By",
+      "default": true,
+      "info": "Required for free plan"
+    }
+  ]
+}
+{% endschema %}
+
+<div
+  class="tiered-pricing-container"
+  data-product-id="{{ product.id }}"
+  data-product-gid="gid://shopify/Product/{{ product.id }}"
+  data-variant-price="{{ product.selected_or_first_available_variant.price | money_without_currency }}"
+  data-currency="{{ cart.currency.iso_code }}"
+>
+  {%- if block.settings.title != blank -%}
+    <h3 class="tiered-pricing-title">{{ block.settings.title }}</h3>
+  {%- endif -%}
+
+  {%- if block.settings.subtitle != blank -%}
+    <p class="tiered-pricing-subtitle">{{ block.settings.subtitle }}</p>
+  {%- endif -%}
+
+  <div class="tiered-pricing-loading" id="tiered-pricing-loading-{{ block.id }}">
+    <div class="tiered-pricing-spinner"></div>
+    <span>Loading discounts...</span>
+  </div>
+
+  <table class="tiered-pricing-table" id="tiered-pricing-table-{{ block.id }}" style="display: none;">
+    <thead>
+      <tr>
+        <th>Quantity</th>
+        <th>Discount</th>
+        {%- if block.settings.show_unit_price -%}
+          <th>Unit Price</th>
+        {%- endif -%}
+        {%- if block.settings.show_savings -%}
+          <th>You Save</th>
+        {%- endif -%}
+      </tr>
+    </thead>
+    <tbody id="tiered-pricing-tbody-{{ block.id }}">
+      <!-- Populated by JavaScript -->
+    </tbody>
+  </table>
+
+  <div class="tiered-pricing-empty" id="tiered-pricing-empty-{{ block.id }}" style="display: none;">
+    <p>No volume discounts available for this product.</p>
+  </div>
+
+  {%- if block.settings.show_powered_by -%}
+    <p class="tiered-pricing-powered-by">
+      Powered by <a href="https://apps.shopify.com/tiered-pricing" target="_blank" rel="noopener">Tiered Pricing</a>
+    </p>
+  {%- endif -%}
+</div>
+
+<style>
+  .tiered-pricing-container {
+    margin: 20px 0;
+    font-family: inherit;
+  }
+
+  .tiered-pricing-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: {{ block.settings.header_text_color }};
+  }
+
+  .tiered-pricing-subtitle {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 16px;
+  }
+
+  .tiered-pricing-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    color: #6b7280;
+  }
+
+  .tiered-pricing-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid {{ block.settings.border_color }};
+    border-top-color: {{ block.settings.highlight_color }};
+    border-radius: 50%;
+    animation: tiered-pricing-spin 1s linear infinite;
+  }
+
+  @keyframes tiered-pricing-spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .tiered-pricing-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  .tiered-pricing-table thead {
+    background-color: {{ block.settings.header_bg_color }};
+  }
+
+  .tiered-pricing-table th,
+  .tiered-pricing-table td {
+    padding: 12px 16px;
+    text-align: center;
+    border: 1px solid {{ block.settings.border_color }};
+  }
+
+  .tiered-pricing-table th {
+    font-weight: 600;
+    color: {{ block.settings.header_text_color }};
+  }
+
+  .tiered-pricing-table tbody tr:hover {
+    background-color: #f9fafb;
+  }
+
+  .tiered-pricing-table .best-deal {
+    background-color: {{ block.settings.highlight_color }}10;
+    border-color: {{ block.settings.highlight_color }};
+  }
+
+  .tiered-pricing-table .best-deal td {
+    border-color: {{ block.settings.highlight_color }};
+  }
+
+  .tiered-pricing-table .discount-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    background-color: {{ block.settings.highlight_color }}20;
+    color: {{ block.settings.highlight_color }};
+  }
+
+  .tiered-pricing-table .best-deal .discount-badge {
+    background-color: {{ block.settings.highlight_color }};
+    color: white;
+  }
+
+  .tiered-pricing-table .original-price {
+    text-decoration: line-through;
+    color: #9ca3af;
+    font-size: 0.75rem;
+    display: block;
+  }
+
+  .tiered-pricing-table .savings {
+    color: {{ block.settings.highlight_color }};
+    font-weight: 600;
+  }
+
+  .tiered-pricing-empty {
+    padding: 20px;
+    text-align: center;
+    color: #6b7280;
+    background-color: #f9fafb;
+    border-radius: 8px;
+  }
+
+  .tiered-pricing-powered-by {
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    text-align: right;
+  }
+
+  .tiered-pricing-powered-by a {
+    color: #6b7280;
+    text-decoration: none;
+  }
+
+  .tiered-pricing-powered-by a:hover {
+    text-decoration: underline;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .tiered-pricing-table th,
+    .tiered-pricing-table td {
+      padding: 8px 12px;
+      font-size: 0.8rem;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  const blockId = '{{ block.id }}';
+  const productGid = 'gid://shopify/Product/{{ product.id }}';
+  const basePrice = parseFloat('{{ product.selected_or_first_available_variant.price | money_without_currency | replace: ",", "" }}');
+  const currencySymbol = '{{ cart.currency.symbol }}';
+  const showUnitPrice = {{ block.settings.show_unit_price | json }};
+  const showSavings = {{ block.settings.show_savings | json }};
+  const highlightBestDeal = {{ block.settings.highlight_best_deal | json }};
+
+  const loadingEl = document.getElementById('tiered-pricing-loading-' + blockId);
+  const tableEl = document.getElementById('tiered-pricing-table-' + blockId);
+  const tbodyEl = document.getElementById('tiered-pricing-tbody-' + blockId);
+  const emptyEl = document.getElementById('tiered-pricing-empty-' + blockId);
+
+  // Fetch pricing tiers from app proxy
+  async function fetchTiers() {
+    try {
+      // App Proxy automatically adds shop and signature parameters
+      const response = await fetch('/apps/tiered-pricing/api/product-tiers?product_id=' + encodeURIComponent(productGid), {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch tiers: ' + response.status);
+      }
+
+      const data = await response.json();
+      return data.tiers || [];
+    } catch (error) {
+      console.error('Tiered Pricing: Failed to fetch tiers', error);
+      return [];
+    }
+  }
+
+  // Render the pricing table
+  function renderTable(tiers) {
+    loadingEl.style.display = 'none';
+
+    if (!tiers || tiers.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    // Find best deal (highest discount percentage)
+    let bestDealIndex = 0;
+    let maxDiscount = 0;
+    tiers.forEach((tier, index) => {
+      const discount = tier.valueType === 'PERCENTAGE' ? tier.value : (tier.value / basePrice * 100);
+      if (discount > maxDiscount) {
+        maxDiscount = discount;
+        bestDealIndex = index;
+      }
+    });
+
+    // Build table rows safely (XSS-safe DOM manipulation)
+    tbodyEl.textContent = ''; // Clear existing content safely
+
+    tiers.forEach((tier, index) => {
+      const isBestDeal = highlightBestDeal && index === bestDealIndex;
+
+      // Validate tier data (prevent XSS from malicious API response)
+      const minQty = parseInt(tier.min, 10) || 0;
+      const maxQty = tier.max ? parseInt(tier.max, 10) : null;
+      const tierValue = parseFloat(tier.value) || 0;
+      const valueType = tier.valueType === 'PERCENTAGE' ? 'PERCENTAGE' : 'FIXED_AMOUNT';
+
+      // Calculate values
+      const quantityText = maxQty
+        ? minQty + ' - ' + maxQty
+        : minQty + '+';
+
+      const discountText = valueType === 'PERCENTAGE'
+        ? tierValue + '%'
+        : currencySymbol + tierValue.toFixed(2);
+
+      let unitPrice = basePrice;
+      if (valueType === 'PERCENTAGE') {
+        unitPrice = basePrice * (1 - tierValue / 100);
+      } else {
+        unitPrice = basePrice - tierValue;
+      }
+      unitPrice = Math.max(0, unitPrice);
+
+      const savings = basePrice - unitPrice;
+
+      // Create row element safely
+      const tr = document.createElement('tr');
+      if (isBestDeal) tr.className = 'best-deal';
+
+      // Quantity cell
+      const tdQty = document.createElement('td');
+      tdQty.textContent = quantityText + ' items';
+      tr.appendChild(tdQty);
+
+      // Discount cell
+      const tdDiscount = document.createElement('td');
+      const discountBadge = document.createElement('span');
+      discountBadge.className = 'discount-badge';
+      discountBadge.textContent = discountText + ' OFF';
+      tdDiscount.appendChild(discountBadge);
+      tr.appendChild(tdDiscount);
+
+      // Unit price cell
+      if (showUnitPrice) {
+        const tdPrice = document.createElement('td');
+        const originalSpan = document.createElement('span');
+        originalSpan.className = 'original-price';
+        originalSpan.textContent = currencySymbol + basePrice.toFixed(2);
+        tdPrice.appendChild(originalSpan);
+        tdPrice.appendChild(document.createTextNode(currencySymbol + unitPrice.toFixed(2)));
+        tr.appendChild(tdPrice);
+      }
+
+      // Savings cell
+      if (showSavings) {
+        const tdSavings = document.createElement('td');
+        tdSavings.className = 'savings';
+        tdSavings.textContent = currencySymbol + savings.toFixed(2);
+        tr.appendChild(tdSavings);
+      }
+
+      tbodyEl.appendChild(tr);
+    });
+
+    tableEl.style.display = 'table';
+  }
+
+  // Initialize
+  fetchTiers().then(renderTable);
+})();
+</script>

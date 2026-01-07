@@ -1,0 +1,801 @@
+{% comment %}
+  Countdown Timer Block
+  Displays urgency timer for time-limited discounts
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Countdown Timer",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Timer Settings"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Timer Title",
+      "default": "Sale ends in:"
+    },
+    {
+      "type": "text",
+      "id": "end_date",
+      "label": "End Date & Time",
+      "info": "Format: YYYY-MM-DD HH:MM (e.g., 2025-12-31 23:59)",
+      "default": "2025-12-31 23:59"
+    },
+    {
+      "type": "header",
+      "content": "Style & Appearance"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        { "value": "default", "label": "Full Banner" },
+        { "value": "minimal", "label": "Compact" },
+        { "value": "floating", "label": "Floating Badge" },
+        { "value": "gradient", "label": "Gradient" },
+        { "value": "neon", "label": "Neon Glow" },
+        { "value": "glass", "label": "Glass Effect" },
+        { "value": "circular", "label": "Circular Cards" }
+      ],
+      "default": "default"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Position",
+      "options": [
+        { "value": "inline", "label": "Inline (in page flow)" },
+        { "value": "top-fixed", "label": "Fixed Top Banner" },
+        { "value": "bottom-fixed", "label": "Fixed Bottom Banner" },
+        { "value": "floating-left", "label": "Floating Left" },
+        { "value": "floating-right", "label": "Floating Right" }
+      ],
+      "default": "inline"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "checkbox",
+      "id": "use_theme_colors",
+      "label": "Use theme colors",
+      "default": false
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background Color",
+      "default": "#ff4444"
+    },
+    {
+      "type": "color",
+      "id": "bg_color_2",
+      "label": "Gradient End Color",
+      "info": "Only used with Gradient style",
+      "default": "#ff8800"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "select",
+      "id": "font_style",
+      "label": "Font Style",
+      "options": [
+        { "value": "theme", "label": "Use Theme Font" },
+        { "value": "modern", "label": "Modern (Inter)" },
+        { "value": "bold", "label": "Bold (Oswald)" },
+        { "value": "elegant", "label": "Elegant (Playfair)" },
+        { "value": "tech", "label": "Tech (Space Mono)" }
+      ],
+      "default": "theme"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "label": "Number Size",
+      "min": 16,
+      "max": 48,
+      "step": 2,
+      "default": 28,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "select",
+      "id": "animation",
+      "label": "Animation Effect",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "pulse", "label": "Pulse" },
+        { "value": "bounce", "label": "Bounce" },
+        { "value": "glow", "label": "Glow" },
+        { "value": "shake", "label": "Shake (last minute)" },
+        { "value": "flip", "label": "Flip Numbers" }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "header",
+      "content": "Expiry Settings"
+    },
+    {
+      "type": "text",
+      "id": "expired_message",
+      "label": "Expired Message",
+      "default": "Sale has ended"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_on_expiry",
+      "label": "Hide when expired",
+      "default": false
+    }
+  ]
+}
+{% endschema %}
+
+<div
+  class="countdown-timer-container countdown-timer-{{ block.settings.style }} countdown-timer-pos-{{ block.settings.position }} countdown-timer-anim-{{ block.settings.animation }} countdown-timer-font-{{ block.settings.font_style }}"
+  id="countdown-timer-{{ block.id }}"
+  data-end-time="{{ block.settings.end_date }}"
+  data-expired-message="{{ block.settings.expired_message }}"
+  data-hide-on-expiry="{{ block.settings.hide_on_expiry }}"
+  data-animation="{{ block.settings.animation }}"
+  style="
+    --timer-bg: {% if block.settings.use_theme_colors %}{{ settings.colors_accent_1 | default: block.settings.bg_color }}{% else %}{{ block.settings.bg_color }}{% endif %};
+    --timer-bg-2: {{ block.settings.bg_color_2 }};
+    --timer-text: {% if block.settings.use_theme_colors %}{{ settings.colors_text | default: block.settings.text_color }}{% else %}{{ block.settings.text_color }}{% endif %};
+    --timer-font-size: {{ block.settings.font_size }}px;
+  "
+>
+  <div class="countdown-timer-inner">
+    <div class="countdown-timer-title">{{ block.settings.title }}</div>
+    <div class="countdown-timer-display">
+      <div class="countdown-timer-unit">
+        <span class="countdown-timer-value" id="timer-days-{{ block.id }}">00</span>
+        <span class="countdown-timer-label">Days</span>
+      </div>
+      <span class="countdown-timer-separator">:</span>
+      <div class="countdown-timer-unit">
+        <span class="countdown-timer-value" id="timer-hours-{{ block.id }}">00</span>
+        <span class="countdown-timer-label">Hours</span>
+      </div>
+      <span class="countdown-timer-separator">:</span>
+      <div class="countdown-timer-unit">
+        <span class="countdown-timer-value" id="timer-mins-{{ block.id }}">00</span>
+        <span class="countdown-timer-label">Mins</span>
+      </div>
+      <span class="countdown-timer-separator">:</span>
+      <div class="countdown-timer-unit">
+        <span class="countdown-timer-value" id="timer-secs-{{ block.id }}">00</span>
+        <span class="countdown-timer-label">Secs</span>
+      </div>
+    </div>
+    <div class="countdown-timer-expired" id="timer-expired-{{ block.id }}" style="display: none;">
+      {{ block.settings.expired_message }}
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Google Fonts Import */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Oswald:wght@500;700&family=Playfair+Display:wght@500;700&family=Space+Mono:wght@400;700&display=swap');
+
+  .countdown-timer-container {
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .countdown-timer-container * {
+    box-sizing: border-box;
+  }
+
+  /* Font Styles */
+  .countdown-timer-font-theme { font-family: inherit; }
+  .countdown-timer-font-modern { font-family: 'Inter', sans-serif; }
+  .countdown-timer-font-bold { font-family: 'Oswald', sans-serif; }
+  .countdown-timer-font-elegant { font-family: 'Playfair Display', serif; }
+  .countdown-timer-font-tech { font-family: 'Space Mono', monospace; }
+
+  /* ========== BASE STYLES ========== */
+  .countdown-timer-container .countdown-timer-value {
+    font-size: var(--timer-font-size, 28px);
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ========== DEFAULT STYLE ========== */
+  .countdown-timer-default {
+    background-color: var(--timer-bg);
+    color: var(--timer-text);
+    padding: 16px 24px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+
+  .countdown-timer-default .countdown-timer-inner {
+    text-align: center;
+  }
+
+  .countdown-timer-default .countdown-timer-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+    opacity: 0.9;
+  }
+
+  .countdown-timer-default .countdown-timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .countdown-timer-default .countdown-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 50px;
+  }
+
+  .countdown-timer-default .countdown-timer-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .countdown-timer-default .countdown-timer-separator {
+    font-size: 24px;
+    font-weight: bold;
+    opacity: 0.6;
+  }
+
+  /* ========== MINIMAL STYLE ========== */
+  .countdown-timer-minimal {
+    background-color: var(--timer-bg);
+    color: var(--timer-text);
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+  }
+
+  .countdown-timer-minimal .countdown-timer-title {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .countdown-timer-minimal .countdown-timer-display {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .countdown-timer-minimal .countdown-timer-unit {
+    display: flex;
+    align-items: baseline;
+  }
+
+  .countdown-timer-minimal .countdown-timer-value {
+    font-size: calc(var(--timer-font-size, 28px) * 0.6);
+  }
+
+  .countdown-timer-minimal .countdown-timer-label {
+    display: none;
+  }
+
+  .countdown-timer-minimal .countdown-timer-separator {
+    font-size: 14px;
+    opacity: 0.6;
+  }
+
+  /* ========== FLOATING STYLE ========== */
+  .countdown-timer-floating {
+    background-color: var(--timer-bg);
+    color: var(--timer-text);
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: inline-block;
+  }
+
+  .countdown-timer-floating .countdown-timer-title {
+    font-size: 11px;
+    margin-bottom: 4px;
+    opacity: 0.9;
+  }
+
+  .countdown-timer-floating .countdown-timer-display {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .countdown-timer-floating .countdown-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .countdown-timer-floating .countdown-timer-value {
+    font-size: calc(var(--timer-font-size, 28px) * 0.65);
+  }
+
+  .countdown-timer-floating .countdown-timer-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+
+  .countdown-timer-floating .countdown-timer-separator {
+    font-size: 16px;
+    opacity: 0.6;
+  }
+
+  /* ========== GRADIENT STYLE ========== */
+  .countdown-timer-gradient {
+    background: linear-gradient(135deg, var(--timer-bg) 0%, var(--timer-bg-2) 100%);
+    color: var(--timer-text);
+    padding: 20px 30px;
+    border-radius: 12px;
+    margin: 16px 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+
+  .countdown-timer-gradient .countdown-timer-inner {
+    text-align: center;
+  }
+
+  .countdown-timer-gradient .countdown-timer-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .countdown-timer-gradient .countdown-timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .countdown-timer-gradient .countdown-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.15);
+    padding: 12px 16px;
+    border-radius: 8px;
+    min-width: 70px;
+  }
+
+  .countdown-timer-gradient .countdown-timer-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    opacity: 0.9;
+    margin-top: 4px;
+  }
+
+  .countdown-timer-gradient .countdown-timer-separator {
+    font-size: 28px;
+    font-weight: bold;
+    opacity: 0.7;
+  }
+
+  /* ========== NEON STYLE ========== */
+  .countdown-timer-neon {
+    background: #0a0a0a;
+    color: var(--timer-bg);
+    padding: 24px 32px;
+    border-radius: 12px;
+    margin: 16px 0;
+    border: 2px solid var(--timer-bg);
+    box-shadow: 0 0 20px var(--timer-bg), inset 0 0 20px rgba(255,255,255,0.05);
+  }
+
+  .countdown-timer-neon .countdown-timer-inner {
+    text-align: center;
+  }
+
+  .countdown-timer-neon .countdown-timer-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    text-shadow: 0 0 10px var(--timer-bg);
+  }
+
+  .countdown-timer-neon .countdown-timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .countdown-timer-neon .countdown-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+  }
+
+  .countdown-timer-neon .countdown-timer-value {
+    text-shadow: 0 0 10px var(--timer-bg), 0 0 20px var(--timer-bg), 0 0 30px var(--timer-bg);
+  }
+
+  .countdown-timer-neon .countdown-timer-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  .countdown-timer-neon .countdown-timer-separator {
+    font-size: 24px;
+    font-weight: bold;
+    opacity: 0.8;
+    text-shadow: 0 0 10px var(--timer-bg);
+  }
+
+  /* ========== GLASS STYLE ========== */
+  .countdown-timer-glass {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--timer-text);
+    padding: 20px 28px;
+    border-radius: 16px;
+    margin: 16px 0;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  }
+
+  .countdown-timer-glass .countdown-timer-inner {
+    text-align: center;
+  }
+
+  .countdown-timer-glass .countdown-timer-title {
+    font-size: 13px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+    font-weight: 500;
+  }
+
+  .countdown-timer-glass .countdown-timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .countdown-timer-glass .countdown-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255,255,255,0.1);
+    padding: 10px 14px;
+    border-radius: 10px;
+    min-width: 60px;
+  }
+
+  .countdown-timer-glass .countdown-timer-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    opacity: 0.7;
+    margin-top: 4px;
+  }
+
+  .countdown-timer-glass .countdown-timer-separator {
+    font-size: 22px;
+    opacity: 0.5;
+  }
+
+  /* ========== CIRCULAR STYLE ========== */
+  .countdown-timer-circular {
+    background-color: var(--timer-bg);
+    color: var(--timer-text);
+    padding: 24px;
+    border-radius: 16px;
+    margin: 16px 0;
+  }
+
+  .countdown-timer-circular .countdown-timer-inner {
+    text-align: center;
+  }
+
+  .countdown-timer-circular .countdown-timer-title {
+    font-size: 14px;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  .countdown-timer-circular .countdown-timer-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .countdown-timer-circular .countdown-timer-unit {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 3px solid rgba(255,255,255,0.3);
+  }
+
+  .countdown-timer-circular .countdown-timer-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-top: 2px;
+  }
+
+  .countdown-timer-circular .countdown-timer-separator {
+    display: none;
+  }
+
+  /* ========== POSITION STYLES ========== */
+  .countdown-timer-pos-inline {
+    position: relative;
+  }
+
+  .countdown-timer-pos-top-fixed {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .countdown-timer-pos-bottom-fixed {
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .countdown-timer-pos-floating-left {
+    position: fixed !important;
+    bottom: 20px;
+    left: 20px;
+    right: auto;
+    z-index: 9999;
+    max-width: 280px;
+  }
+
+  .countdown-timer-pos-floating-right {
+    position: fixed !important;
+    bottom: 20px;
+    right: 20px;
+    left: auto;
+    z-index: 9999;
+    max-width: 280px;
+  }
+
+  /* ========== ANIMATIONS ========== */
+  /* Pulse Animation */
+  .countdown-timer-anim-pulse .countdown-timer-value {
+    animation: timer-pulse 1s ease-in-out infinite;
+  }
+
+  @keyframes timer-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  /* Bounce Animation */
+  .countdown-timer-anim-bounce .countdown-timer-unit {
+    animation: timer-bounce 0.6s ease infinite;
+  }
+
+  .countdown-timer-anim-bounce .countdown-timer-unit:nth-child(2) { animation-delay: 0.1s; }
+  .countdown-timer-anim-bounce .countdown-timer-unit:nth-child(4) { animation-delay: 0.2s; }
+  .countdown-timer-anim-bounce .countdown-timer-unit:nth-child(6) { animation-delay: 0.3s; }
+  .countdown-timer-anim-bounce .countdown-timer-unit:nth-child(8) { animation-delay: 0.4s; }
+
+  @keyframes timer-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  /* Glow Animation */
+  .countdown-timer-anim-glow .countdown-timer-value {
+    animation: timer-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes timer-glow {
+    0%, 100% { text-shadow: 0 0 5px currentColor; }
+    50% { text-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+  }
+
+  /* Shake Animation (for urgency) */
+  .countdown-timer-anim-shake.countdown-timer-urgent .countdown-timer-container {
+    animation: timer-shake 0.5s ease-in-out infinite;
+  }
+
+  @keyframes timer-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+  }
+
+  /* Flip Animation */
+  .countdown-timer-anim-flip .countdown-timer-value {
+    display: inline-block;
+    transition: transform 0.3s ease;
+  }
+
+  .countdown-timer-anim-flip .countdown-timer-value.flip {
+    animation: timer-flip 0.6s ease;
+  }
+
+  @keyframes timer-flip {
+    0% { transform: rotateX(0); }
+    50% { transform: rotateX(90deg); }
+    100% { transform: rotateX(0); }
+  }
+
+  /* ========== EXPIRED STATE ========== */
+  .countdown-timer-expired {
+    font-size: 16px;
+    font-weight: 500;
+    padding: 8px 0;
+    text-align: center;
+  }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 480px) {
+    .countdown-timer-default .countdown-timer-value,
+    .countdown-timer-gradient .countdown-timer-value,
+    .countdown-timer-neon .countdown-timer-value,
+    .countdown-timer-glass .countdown-timer-value,
+    .countdown-timer-circular .countdown-timer-value {
+      font-size: calc(var(--timer-font-size, 28px) * 0.75);
+    }
+
+    .countdown-timer-default .countdown-timer-unit,
+    .countdown-timer-gradient .countdown-timer-unit,
+    .countdown-timer-glass .countdown-timer-unit {
+      min-width: 40px;
+      padding: 8px 10px;
+    }
+
+    .countdown-timer-circular .countdown-timer-unit {
+      width: 55px;
+      height: 55px;
+    }
+
+    .countdown-timer-circular .countdown-timer-display {
+      gap: 8px;
+    }
+
+    .countdown-timer-pos-floating-left,
+    .countdown-timer-pos-floating-right {
+      left: 10px;
+      right: 10px;
+      max-width: none;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  const blockId = '{{ block.id }}';
+  const container = document.getElementById('countdown-timer-' + blockId);
+  const endTimeStr = container.dataset.endTime;
+  const expiredMessage = container.dataset.expiredMessage;
+  const hideOnExpiry = container.dataset.hideOnExpiry === 'true';
+  const animation = container.dataset.animation || 'none';
+
+  if (!endTimeStr) {
+    container.style.display = 'none';
+    return;
+  }
+
+  const endTime = new Date(endTimeStr.replace(' ', 'T')).getTime();
+
+  if (isNaN(endTime)) {
+    console.error('Countdown Timer: Invalid end time format');
+    container.style.display = 'none';
+    return;
+  }
+
+  const daysEl = document.getElementById('timer-days-' + blockId);
+  const hoursEl = document.getElementById('timer-hours-' + blockId);
+  const minsEl = document.getElementById('timer-mins-' + blockId);
+  const secsEl = document.getElementById('timer-secs-' + blockId);
+  const expiredEl = document.getElementById('timer-expired-' + blockId);
+  const displayEl = container.querySelector('.countdown-timer-display');
+
+  // Store previous values for flip animation
+  let prevValues = { days: '', hours: '', mins: '', secs: '' };
+
+  function triggerFlip(element, newValue, key) {
+    if (animation === 'flip' && prevValues[key] !== newValue) {
+      element.classList.add('flip');
+      setTimeout(() => element.classList.remove('flip'), 600);
+      prevValues[key] = newValue;
+    }
+  }
+
+  function updateTimer() {
+    const now = new Date().getTime();
+    const distance = endTime - now;
+
+    if (distance < 0) {
+      // Timer expired
+      if (hideOnExpiry) {
+        container.style.display = 'none';
+      } else {
+        displayEl.style.display = 'none';
+        expiredEl.style.display = 'block';
+      }
+      return;
+    }
+
+    // Add urgency class if less than 1 minute remaining (for shake animation)
+    if (distance < 60000 && animation === 'shake') {
+      container.classList.add('countdown-timer-urgent');
+    }
+
+    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    const daysStr = days.toString().padStart(2, '0');
+    const hoursStr = hours.toString().padStart(2, '0');
+    const minsStr = minutes.toString().padStart(2, '0');
+    const secsStr = seconds.toString().padStart(2, '0');
+
+    // Trigger flip animation if values changed
+    triggerFlip(daysEl, daysStr, 'days');
+    triggerFlip(hoursEl, hoursStr, 'hours');
+    triggerFlip(minsEl, minsStr, 'mins');
+    triggerFlip(secsEl, secsStr, 'secs');
+
+    daysEl.textContent = daysStr;
+    hoursEl.textContent = hoursStr;
+    minsEl.textContent = minsStr;
+    secsEl.textContent = secsStr;
+  }
+
+  // Initial update
+  updateTimer();
+
+  // Update every second
+  setInterval(updateTimer, 1000);
+})();
+</script>

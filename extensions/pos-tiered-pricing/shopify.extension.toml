@@ -1,0 +1,37 @@
+# POS UI Extension
+# Displays tiered pricing information in Shopify POS
+
+api_version = "2025-01"
+
+[[extensions]]
+uid = "1f8fbbb6-f79c-8ed2-dcb2-4a33dd0346e0c2b07096"
+type = "ui_extension"
+name = "Tiered Pricing POS"
+handle = "pos-tiered-pricing"
+
+[[extensions.targeting]]
+target = "pos.product-details.block.render"
+module = "./src/index.tsx"
+export = "productDetailsBlock"
+
+[[extensions.targeting]]
+target = "pos.purchase.post.block.render"
+module = "./src/index.tsx"
+export = "postPurchaseBlock"
+
+[extensions.capabilities]
+network_access = true
+block_progress = false
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "show_tier_table"
+type = "boolean"
+name = "Show Tier Table"
+description = "Display volume discount tiers on product details"
+
+[[extensions.settings.fields]]
+key = "show_post_purchase"
+type = "boolean"
+name = "Show Post-Purchase Savings"
+description = "Show volume discount savings after purchase"

@@ -1,0 +1,653 @@
+{% comment %}
+  Cart Upsell Block
+  Shows personalized product recommendations based on cart contents
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Cart Upsell",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Upsell Settings"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Section Title",
+      "default": "Complete Your Order"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Add these items and save!"
+    },
+    {
+      "type": "select",
+      "id": "recommendation_type",
+      "label": "Recommendation Type",
+      "options": [
+        { "value": "related", "label": "Related Products" },
+        { "value": "bestsellers", "label": "Best Sellers" },
+        { "value": "collection", "label": "From Collection" }
+      ],
+      "default": "related"
+    },
+    {
+      "type": "collection",
+      "id": "upsell_collection",
+      "label": "Upsell Collection",
+      "info": "Only used when 'From Collection' is selected"
+    },
+    {
+      "type": "range",
+      "id": "max_products",
+      "label": "Maximum Products to Show",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "default": 3
+    },
+    {
+      "type": "header",
+      "content": "Discount Incentive"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_discount",
+      "label": "Enable upsell discount",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "discount_percent",
+      "label": "Discount Percentage",
+      "min": 5,
+      "max": 50,
+      "step": 5,
+      "default": 10,
+      "unit": "%"
+    },
+    {
+      "type": "text",
+      "id": "discount_badge",
+      "label": "Discount Badge Text",
+      "default": "BUNDLE & SAVE"
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "horizontal", "label": "Horizontal Scroll" },
+        { "value": "grid", "label": "Grid" },
+        { "value": "list", "label": "List" }
+      ],
+      "default": "horizontal"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background Color",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "color",
+      "id": "card_bg_color",
+      "label": "Card Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent Color (Buttons & Badges)",
+      "default": "#008060"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_original_price",
+      "label": "Show original price (strikethrough)",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Button"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Add to Cart Button Text",
+      "default": "Add to Cart"
+    },
+    {
+      "type": "text",
+      "id": "added_text",
+      "label": "Added Confirmation Text",
+      "default": "Added!"
+    }
+  ]
+}
+{% endschema %}
+
+<div
+  class="cart-upsell-container cart-upsell-layout-{{ block.settings.layout }}"
+  id="cart-upsell-{{ block.id }}"
+  data-max-products="{{ block.settings.max_products }}"
+  data-recommendation-type="{{ block.settings.recommendation_type }}"
+  data-collection-id="{{ block.settings.upsell_collection }}"
+  data-enable-discount="{{ block.settings.enable_discount }}"
+  data-discount-percent="{{ block.settings.discount_percent }}"
+  style="
+    --upsell-bg: {{ block.settings.bg_color }};
+    --upsell-card-bg: {{ block.settings.card_bg_color }};
+    --upsell-accent: {{ block.settings.accent_color }};
+    --upsell-text: {{ block.settings.text_color }};
+  "
+>
+  <div class="cart-upsell-header">
+    <h3 class="cart-upsell-title">{{ block.settings.title }}</h3>
+    {% if block.settings.subtitle != blank %}
+    <p class="cart-upsell-subtitle">{{ block.settings.subtitle }}</p>
+    {% endif %}
+  </div>
+
+  <div class="cart-upsell-products" id="cart-upsell-products-{{ block.id }}">
+    <!-- Products will be loaded via JavaScript -->
+    <div class="cart-upsell-loading">
+      <div class="cart-upsell-spinner"></div>
+      <span>Loading recommendations...</span>
+    </div>
+  </div>
+</div>
+
+<template id="cart-upsell-template-{{ block.id }}">
+  <div class="cart-upsell-product">
+    {% if block.settings.enable_discount %}
+    <div class="cart-upsell-badge">{{ block.settings.discount_badge }}</div>
+    {% endif %}
+    <div class="cart-upsell-image">
+      <img src="" alt="" loading="lazy" width="80" height="80" />
+    </div>
+    <div class="cart-upsell-info">
+      <h4 class="cart-upsell-product-title"></h4>
+      <div class="cart-upsell-pricing">
+        {% if block.settings.show_original_price %}
+        <span class="cart-upsell-original-price"></span>
+        {% endif %}
+        <span class="cart-upsell-price"></span>
+      </div>
+      <button class="cart-upsell-add-btn" type="button">
+        <span class="btn-text">{{ block.settings.button_text }}</span>
+        <span class="btn-added">{{ block.settings.added_text }}</span>
+      </button>
+    </div>
+  </div>
+</template>
+
+<style>
+  .cart-upsell-container {
+    background-color: var(--upsell-bg);
+    color: var(--upsell-text);
+    padding: 24px;
+    border-radius: 12px;
+    margin: 20px 0;
+    font-family: inherit;
+  }
+
+  .cart-upsell-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .cart-upsell-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+
+  .cart-upsell-subtitle {
+    font-size: 14px;
+    opacity: 0.8;
+    margin: 0;
+  }
+
+  /* Loading State */
+  .cart-upsell-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+    color: var(--upsell-text);
+    opacity: 0.6;
+  }
+
+  .cart-upsell-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--upsell-text);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* Products Container */
+  .cart-upsell-products {
+    display: flex;
+    gap: 16px;
+  }
+
+  /* Horizontal Layout */
+  .cart-upsell-layout-horizontal .cart-upsell-products {
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  .cart-upsell-layout-horizontal .cart-upsell-product {
+    min-width: 160px;
+    max-width: 180px;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+  }
+
+  /* Grid Layout */
+  .cart-upsell-layout-grid .cart-upsell-products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 180px));
+    justify-content: center;
+  }
+
+  /* List Layout */
+  .cart-upsell-layout-list .cart-upsell-products {
+    flex-direction: column;
+  }
+
+  .cart-upsell-layout-list .cart-upsell-product {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .cart-upsell-layout-list .cart-upsell-image {
+    width: 80px;
+    height: 80px;
+    flex-shrink: 0;
+  }
+
+  /* Product Card */
+  .cart-upsell-product {
+    position: relative;
+    background: var(--upsell-card-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+    max-width: 180px;
+    width: 100%;
+  }
+
+  .cart-upsell-product:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  }
+
+  /* Badge */
+  .cart-upsell-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: var(--upsell-accent);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 1;
+  }
+
+  /* Image */
+  .cart-upsell-image {
+    width: 100%;
+    max-height: 120px;
+    aspect-ratio: 1;
+    overflow: hidden;
+  }
+
+  .cart-upsell-image img {
+    width: 100%;
+    height: 100%;
+    max-height: 120px;
+    object-fit: cover;
+    transition: transform 0.3s;
+  }
+
+  .cart-upsell-product:hover .cart-upsell-image img {
+    transform: scale(1.05);
+  }
+
+  /* Info */
+  .cart-upsell-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  .cart-upsell-product-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Pricing */
+  .cart-upsell-pricing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .cart-upsell-original-price {
+    font-size: 12px;
+    text-decoration: line-through;
+    opacity: 0.6;
+  }
+
+  .cart-upsell-price {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--upsell-accent);
+  }
+
+  /* Add Button */
+  .cart-upsell-add-btn {
+    margin-top: auto;
+    width: 100%;
+    padding: 10px 16px;
+    background: var(--upsell-accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cart-upsell-add-btn:hover {
+    filter: brightness(1.1);
+  }
+
+  .cart-upsell-add-btn:active {
+    transform: scale(0.98);
+  }
+
+  .cart-upsell-add-btn .btn-added {
+    display: none;
+  }
+
+  .cart-upsell-add-btn.added .btn-text {
+    display: none;
+  }
+
+  .cart-upsell-add-btn.added .btn-added {
+    display: inline;
+  }
+
+  .cart-upsell-add-btn.added {
+    background: #28a745;
+  }
+
+  .cart-upsell-add-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Empty State */
+  .cart-upsell-empty {
+    text-align: center;
+    padding: 40px;
+    opacity: 0.6;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .cart-upsell-container {
+      padding: 16px;
+    }
+
+    .cart-upsell-layout-horizontal .cart-upsell-product {
+      min-width: 160px;
+    }
+
+    .cart-upsell-title {
+      font-size: 18px;
+    }
+  }
+
+  /* Scrollbar */
+  .cart-upsell-products::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .cart-upsell-products::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.05);
+    border-radius: 3px;
+  }
+
+  .cart-upsell-products::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 3px;
+  }
+</style>
+
+<script>
+(function() {
+  const blockId = '{{ block.id }}';
+  const container = document.getElementById('cart-upsell-' + blockId);
+  const productsContainer = document.getElementById('cart-upsell-products-' + blockId);
+  const template = document.getElementById('cart-upsell-template-' + blockId);
+
+  const maxProducts = parseInt(container.dataset.maxProducts) || 3;
+  const recommendationType = container.dataset.recommendationType;
+  const collectionId = container.dataset.collectionId;
+  const enableDiscount = container.dataset.enableDiscount === 'true';
+  const discountPercent = parseInt(container.dataset.discountPercent) || 10;
+
+  const currency = Shopify.currency?.active || 'USD';
+
+  function formatMoney(cents) {
+    const amount = cents / 100;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency
+    }).format(amount);
+  }
+
+  function calculateDiscountedPrice(price) {
+    if (!enableDiscount) return price;
+    return Math.round(price * (1 - discountPercent / 100));
+  }
+
+  async function getCartProductIds() {
+    try {
+      const response = await fetch('/cart.js');
+      const cart = await response.json();
+      return cart.items.map(item => item.product_id);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function getRecommendations(productIds) {
+    // Get recommendations based on first product in cart
+    if (recommendationType === 'related' && productIds.length > 0) {
+      try {
+        const response = await fetch(`/recommendations/products.json?product_id=${productIds[0]}&limit=${maxProducts + productIds.length}`);
+        const data = await response.json();
+        // Filter out products already in cart
+        return data.products.filter(p => !productIds.includes(p.id)).slice(0, maxProducts);
+      } catch (e) {
+        return getBestSellers(productIds);
+      }
+    }
+
+    if (recommendationType === 'collection' && collectionId) {
+      return getCollectionProducts(collectionId, productIds);
+    }
+
+    return getBestSellers(productIds);
+  }
+
+  async function getBestSellers(excludeIds) {
+    try {
+      // Fetch from collections/all as fallback
+      const response = await fetch('/collections/all/products.json?limit=' + (maxProducts + excludeIds.length));
+      const data = await response.json();
+      return data.products.filter(p => !excludeIds.includes(p.id)).slice(0, maxProducts);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function getCollectionProducts(handle, excludeIds) {
+    try {
+      const response = await fetch(`/collections/${handle}/products.json?limit=${maxProducts + excludeIds.length}`);
+      const data = await response.json();
+      return data.products.filter(p => !excludeIds.includes(p.id)).slice(0, maxProducts);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function renderProducts(products) {
+    if (products.length === 0) {
+      productsContainer.innerHTML = '<div class="cart-upsell-empty">No recommendations available</div>';
+      return;
+    }
+
+    productsContainer.innerHTML = '';
+
+    products.forEach(product => {
+      const clone = template.content.cloneNode(true);
+      const card = clone.querySelector('.cart-upsell-product');
+
+      // Image
+      const img = clone.querySelector('.cart-upsell-image img');
+      if (product.images && product.images.length > 0) {
+        img.src = product.images[0].src;
+        img.alt = product.title;
+      } else if (product.featured_image) {
+        img.src = product.featured_image;
+        img.alt = product.title;
+      }
+
+      // Title
+      clone.querySelector('.cart-upsell-product-title').textContent = product.title;
+
+      // Pricing
+      const variant = product.variants[0];
+      const originalPrice = variant.price;
+      const discountedPrice = calculateDiscountedPrice(originalPrice);
+
+      const originalPriceEl = clone.querySelector('.cart-upsell-original-price');
+      if (originalPriceEl && enableDiscount) {
+        originalPriceEl.textContent = formatMoney(originalPrice);
+      } else if (originalPriceEl) {
+        originalPriceEl.style.display = 'none';
+      }
+
+      clone.querySelector('.cart-upsell-price').textContent = formatMoney(enableDiscount ? discountedPrice : originalPrice);
+
+      // Badge
+      if (!enableDiscount) {
+        const badge = clone.querySelector('.cart-upsell-badge');
+        if (badge) badge.style.display = 'none';
+      }
+
+      // Add to cart button
+      const addBtn = clone.querySelector('.cart-upsell-add-btn');
+      addBtn.dataset.variantId = variant.id;
+
+      addBtn.addEventListener('click', async function() {
+        if (this.disabled) return;
+        this.disabled = true;
+
+        try {
+          const response = await fetch('/cart/add.js', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: [{
+                id: this.dataset.variantId,
+                quantity: 1
+              }]
+            })
+          });
+
+          if (response.ok) {
+            this.classList.add('added');
+            // Trigger cart update event
+            document.dispatchEvent(new CustomEvent('cart:updated'));
+
+            // Reset after 2 seconds
+            setTimeout(() => {
+              this.classList.remove('added');
+              this.disabled = false;
+            }, 2000);
+          } else {
+            this.disabled = false;
+          }
+        } catch (e) {
+          this.disabled = false;
+        }
+      });
+
+      productsContainer.appendChild(clone);
+    });
+  }
+
+  async function init() {
+    const cartProductIds = await getCartProductIds();
+    const products = await getRecommendations(cartProductIds);
+    renderProducts(products);
+  }
+
+  // Initialize
+  init();
+
+  // Re-initialize on cart updates
+  document.addEventListener('cart:updated', function() {
+    setTimeout(init, 500);
+  });
+})();
+</script>

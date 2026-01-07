@@ -1,0 +1,74 @@
+{
+  "tier_table": {
+    "title": "Descuentos por Volumen",
+    "quantity": "Cantidad",
+    "discount": "Descuento",
+    "price": "Precio",
+    "you_save": "Ahorras",
+    "best_value": "Mejor Valor",
+    "buy_more_save_more": "¡Compra más, ahorra más!",
+    "add_items": "Añade {{ count }} más para {{ discount }} de descuento",
+    "units": "unidades",
+    "per_item": "por unidad",
+    "off": "de descuento"
+  },
+  "countdown_timer": {
+    "sale_ends": "La oferta termina en:",
+    "days": "Días",
+    "hours": "Horas",
+    "mins": "Min",
+    "secs": "Seg",
+    "expired": "La oferta ha terminado",
+    "hurry": "¡Date prisa! Oferta por tiempo limitado"
+  },
+  "free_shipping": {
+    "progress": "¡Añade {{ amount }} más para ENVÍO GRATIS!",
+    "success": "¡Felicidades! ¡Has desbloqueado ENVÍO GRATIS!",
+    "empty": "¡Añade {{ amount }} para ENVÍO GRATIS!",
+    "free": "GRATIS",
+    "shipping": "Envío"
+  },
+  "cart_upsell": {
+    "title": "Completa Tu Pedido",
+    "subtitle": "¡Añade estos artículos y ahorra!",
+    "add_to_cart": "Añadir al Carrito",
+    "added": "¡Añadido!",
+    "bundle_save": "PACK & AHORRA",
+    "frequently_bought": "Comprados Frecuentemente Juntos",
+    "you_may_like": "También Te Puede Gustar"
+  },
+  "general": {
+    "loading": "Cargando...",
+    "error": "Algo salió mal",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar"
+  },
+  "spin_wheel": {
+    "badge": "Oferta por tiempo limitado",
+    "title": "¡Gira y Gana!",
+    "subtitle": "¡Prueba tu suerte y gana increíbles descuentos!",
+    "email_placeholder": "Tu correo electrónico",
+    "phone_placeholder": "Número de teléfono (opcional)",
+    "spin_button": "GIRAR LA RUEDA",
+    "terms": "Al girar, aceptas recibir correos de marketing.",
+    "win_title": "¡Felicidades!",
+    "win_message": "¡Usa este código en el checkout para reclamar tu premio!",
+    "coupon_label": "Tu Código de Descuento",
+    "copy_button": "Copiar Código",
+    "copied": "¡Copiado!",
+    "shop_now": "Comprar Ahora",
+    "trigger_text": "¡Gira y Gana!"
+  },
+  "post_purchase": {
+    "headline": "¡Espera! Oferta especial solo para ti",
+    "subheadline": "¡Añade esto a tu pedido ahora y ahorra!",
+    "cta_button": "Añadir al pedido - Un clic",
+    "decline": "No gracias",
+    "timer_prefix": "La oferta expira en:",
+    "secure": "Pago seguro",
+    "no_extra_payment": "Sin pago adicional",
+    "ships_together": "Se envía con tu pedido",
+    "added": "¡Añadido a tu pedido!"
+  }
+}

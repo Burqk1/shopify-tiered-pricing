@@ -1,0 +1,19 @@
+{
+  "extension": {
+    "name": "Tiered Pricing POS"
+  },
+  "labels": {
+    "volume_discounts": "Volume Discounts",
+    "buy_more_save_more": "Buy More, Save More!",
+    "loading": "Loading discounts...",
+    "calculating": "Calculating savings...",
+    "error": "Failed to load discounts",
+    "discount_applied": "Volume Discount Applied!",
+    "savings_message": "You're saving {{amount}} with volume discounts",
+    "discount_breakdown": "Discount Breakdown",
+    "total_savings": "Total Savings",
+    "applies_at_checkout": "Discount applies automatically at checkout",
+    "items": "items",
+    "off": "OFF"
+  }
+}

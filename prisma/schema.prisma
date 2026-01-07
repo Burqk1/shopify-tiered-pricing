@@ -1,0 +1,1059 @@
+// Prisma Schema for Shopify Tiered Pricing & B2B Wholesaler
+// Database: PostgreSQL (Prisma Postgres)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// SHOPIFY SESSION (Required for Shopify App authentication)
+// ============================================================================
+
+model Session {
+  id                    String    @id
+  shop                  String
+  state                 String
+  isOnline              Boolean   @default(false)
+  scope                 String?
+  expires               DateTime?
+  accessToken           String
+  userId                BigInt?
+  firstName             String?
+  lastName              String?
+  email                 String?
+  accountOwner          Boolean   @default(false)
+  locale                String?
+  collaborator          Boolean?  @default(false)
+  emailVerified         Boolean?  @default(false)
+  refreshToken          String?
+  refreshTokenExpires   DateTime?
+
+  @@index([shop])
+}
+
+// ============================================================================
+// SHOP (Store information and subscription)
+// ============================================================================
+
+model Shop {
+  id          String        @id @default(uuid())
+  shopDomain  String        @unique
+  shopName    String?
+  email       String?
+  accessToken String?
+  plan        Plan          @default(FREE)
+  ruleLimit   Int           @default(1) // FREE: 1, GROWTH/PRO: unlimited (-1)
+  rules       PricingRule[]
+  syncLogs    SyncLog[]
+
+  // Shop Settings
+  currency         String    @default("USD")  // Shop currency code (ISO 4217)
+  currencySymbol   String    @default("$")    // Currency symbol for display
+
+  // POS Settings
+  posEnabled       Boolean   @default(true)   // Enable/disable POS integration
+  posShowTierInfo  Boolean   @default(true)   // Show tier info on POS
+  posStaffOverride Boolean   @default(false)  // Allow staff to override discounts
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([shopDomain])
+}
+
+enum Plan {
+  FREE
+  GROWTH
+  PROFESSIONAL
+}
+
+// ============================================================================
+// PRICING RULE (Main rule container)
+// ============================================================================
+
+model PricingRule {
+  id          String          @id @default(uuid())
+  shopId      String
+  shop        Shop            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  name        String          // Human-readable name (e.g., "T-Shirt Wholesale Discount")
+  description String?         // Optional description
+  priority    Int             @default(0) // Higher = more important (for conflict resolution)
+  status      RuleStatus      @default(DRAFT)
+
+  // Scheduling
+  startDate   DateTime?       // null = starts immediately
+  endDate     DateTime?       // null = no end date
+
+  // Relations
+  conditions  RuleCondition[]
+  tiers       DiscountTier[]
+
+  // Sync tracking
+  syncedAt    DateTime?       // Last successful sync to Metaobject
+  syncError   String?         // Last sync error message (if any)
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([shopId, status])
+  @@index([shopId, priority])
+}
+
+enum RuleStatus {
+  DRAFT    // Not active, not synced
+  ACTIVE   // Active and synced to Metaobject
+  PAUSED   // Temporarily disabled
+  ARCHIVED // Soft deleted
+}
+
+// ============================================================================
+// RULE CONDITION (What products/customers does this rule apply to?)
+// ============================================================================
+
+model RuleCondition {
+  id      String        @id @default(uuid())
+  ruleId  String
+  rule    PricingRule   @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  type    ConditionType
+  value   String        // Product GID, Collection GID, or Tag name
+
+  // Optional: Store human-readable label for UI
+  label   String?       // e.g., "Blue T-Shirt", "Summer Collection", "wholesale"
+
+  @@index([ruleId])
+  @@index([type, value])
+}
+
+enum ConditionType {
+  PRODUCT       // Specific product (gid://shopify/Product/123)
+  VARIANT       // Specific variant (gid://shopify/ProductVariant/123)
+  COLLECTION    // All products in collection (gid://shopify/Collection/123)
+  CUSTOMER_TAG  // Customers with specific tag (e.g., "wholesale", "vip")
+  ALL_PRODUCTS  // Applies to all products (no value needed)
+}
+
+// ============================================================================
+// DISCOUNT TIER (Quantity-based pricing tiers)
+// ============================================================================
+
+model DiscountTier {
+  id          String       @id @default(uuid())
+  ruleId      String
+  rule        PricingRule  @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  minQuantity Int          // Minimum quantity to trigger (e.g., 5)
+  maxQuantity Int?         // Maximum quantity (null = unlimited)
+
+  valueType   DiscountType
+  value       Decimal      @db.Decimal(10, 2) // Discount amount or percentage
+
+  // Optional: Custom message for this tier
+  message     String?      // e.g., "Buy 10+ and save 20%!"
+
+  @@index([ruleId])
+  @@index([ruleId, minQuantity])
+}
+
+enum DiscountType {
+  PERCENTAGE    // e.g., 20% off
+  FIXED_AMOUNT  // e.g., $5 off per item
+}
+
+// ============================================================================
+// SYNC LOG (Audit trail for Metaobject syncs)
+// ============================================================================
+
+model SyncLog {
+  id          String     @id @default(uuid())
+  shopId      String
+  shop        Shop       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  status      SyncStatus
+  rulesCount  Int        // Number of rules synced
+  payload     String?    @db.Text // Compressed JSON payload (for debugging)
+  error       String?    @db.Text // Error message if failed
+  duration    Int?       // Sync duration in milliseconds
+
+  createdAt   DateTime   @default(now())
+
+  @@index([shopId, createdAt])
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+  PARTIAL // Some rules synced, some failed
+}
+
+// ============================================================================
+// ANALYTICS - Track discount usage and revenue impact
+// ============================================================================
+
+model DiscountUsage {
+  id              String      @id @default(uuid())
+  shopId          String
+  ruleId          String?     // Which pricing rule was applied
+  bundleId        String?     // Which bundle was applied (if any)
+
+  // Order details
+  orderId         String      // Shopify Order GID
+  orderNumber     String      // Human-readable order number
+  customerId      String?     // Shopify Customer GID
+  customerEmail   String?
+
+  // Discount details
+  discountType    String      // "TIERED" | "BUNDLE"
+  tierApplied     String?     // Which tier was triggered (e.g., "10+ items")
+  originalPrice   Decimal     @db.Decimal(10, 2)
+  discountedPrice Decimal     @db.Decimal(10, 2)
+  discountAmount  Decimal     @db.Decimal(10, 2)
+  discountPercent Decimal     @db.Decimal(5, 2)
+  quantity        Int
+  currency        String      @default("USD")
+
+  // Product info
+  productId       String?
+  productTitle    String?
+  variantId       String?
+  variantTitle    String?
+
+  createdAt       DateTime    @default(now())
+
+  @@index([shopId, createdAt])
+  @@index([shopId, ruleId])
+  @@index([shopId, bundleId])
+  @@index([orderId])
+}
+
+// ============================================================================
+// BUNDLE DISCOUNT - Buy multiple products together for extra discount
+// ============================================================================
+
+model Bundle {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Summer Outfit Bundle"
+  description String?
+  status      RuleStatus    @default(DRAFT)
+
+  // Discount
+  discountType  DiscountType
+  discountValue Decimal     @db.Decimal(10, 2)
+
+  // Scheduling
+  startDate   DateTime?
+  endDate     DateTime?
+
+  // Products in bundle
+  products    BundleProduct[]
+
+  // Settings
+  requireAll  Boolean       @default(true)  // Must buy ALL products?
+  minProducts Int           @default(2)     // Minimum products to qualify
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([shopId, status])
+}
+
+model BundleProduct {
+  id          String    @id @default(uuid())
+  bundleId    String
+  bundle      Bundle    @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  productId   String    // Shopify Product GID
+  variantId   String?   // Optional: specific variant only
+  productTitle String?  // Cached for display
+  minQuantity Int       @default(1) // Minimum quantity of this product
+
+  @@index([bundleId])
+  @@unique([bundleId, productId, variantId])
+}
+
+// ============================================================================
+// COUNTDOWN TIMER - Urgency for time-limited discounts
+// ============================================================================
+
+model CountdownTimer {
+  id          String      @id @default(uuid())
+  shopId      String
+
+  name        String      // e.g., "Flash Sale Timer"
+  status      RuleStatus  @default(DRAFT)
+
+  // Timer settings
+  endTime     DateTime    // When the timer expires
+  timezone    String      @default("UTC")
+
+  // Display settings
+  title       String      @default("Sale ends in:")
+  style       String      @default("default") // "default" | "minimal" | "banner"
+  bgColor     String      @default("#ff4444")
+  textColor   String      @default("#ffffff")
+
+  // What to show after expiry
+  expiredMessage String?   // e.g., "Sale has ended"
+  hideOnExpiry   Boolean   @default(false)
+
+  // Targeting
+  showOn      TimerShowOn @default(ALL_PAGES)
+  productIds  String[]    // If showOn = SPECIFIC_PRODUCTS
+  collectionIds String[]  // If showOn = SPECIFIC_COLLECTIONS
+
+  // Link to pricing rule (optional)
+  linkedRuleId String?    // Auto-disable rule when timer expires
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([shopId, status])
+}
+
+enum TimerShowOn {
+  ALL_PAGES
+  PRODUCT_PAGES
+  COLLECTION_PAGES
+  CART_PAGE
+  SPECIFIC_PRODUCTS
+  SPECIFIC_COLLECTIONS
+}
+
+// ============================================================================
+// B2B CUSTOMER GROUPS - Wholesale pricing for specific customer groups
+// ============================================================================
+
+model CustomerGroup {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Wholesale", "VIP", "Gold Members"
+  description String?
+  tag         String        // Shopify customer tag to identify members
+
+  // Pricing
+  discountType  DiscountType  @default(PERCENTAGE)
+  discountValue Decimal       @db.Decimal(10, 2) @default(0) // Base discount for this group
+
+  // Specific pricing overrides
+  priceLists  CustomerGroupPrice[]
+
+  // Settings
+  minOrderValue   Decimal?    @db.Decimal(10, 2) // Minimum order for wholesale
+  taxExempt       Boolean     @default(false)
+  netTerms        Int?        // Payment terms in days (Net 15, Net 30, etc.)
+
+  // Auto-tagging rules
+  autoTagOnSpend  Decimal?    @db.Decimal(10, 2) // Auto-add tag when customer spends X
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([shopId, tag])
+  @@index([shopId])
+}
+
+model CustomerGroupPrice {
+  id          String        @id @default(uuid())
+  groupId     String
+  group       CustomerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  productId   String        // Shopify Product GID
+  variantId   String?       // Optional: specific variant
+
+  // Custom pricing for this group
+  priceType   GroupPriceType
+  priceValue  Decimal       @db.Decimal(10, 2)
+
+  @@unique([groupId, productId, variantId])
+  @@index([groupId])
+}
+
+enum GroupPriceType {
+  FIXED_PRICE     // Specific price for this group
+  DISCOUNT_PERCENT // Percentage off regular price
+  DISCOUNT_AMOUNT  // Fixed amount off regular price
+}
+
+// ============================================================================
+// WHOLESALE APPLICATION FORM
+// ============================================================================
+
+model WholesaleApplication {
+  id            String        @id @default(uuid())
+  shopId        String
+
+  // Applicant info
+  email         String
+  companyName   String
+  contactName   String
+  phone         String?
+  website       String?
+  taxId         String?       // Business tax ID
+
+  // Business details
+  businessType  String?       // Retailer, Distributor, etc.
+  annualRevenue String?
+  monthlyVolume String?       // Expected monthly order volume
+
+  // Address
+  address       String?
+  city          String?
+  state         String?
+  country       String?
+  postalCode    String?
+
+  // Application status
+  status        ApplicationStatus @default(PENDING)
+  notes         String?       @db.Text
+  reviewedAt    DateTime?
+  reviewedBy    String?
+
+  // Assign to group on approval
+  assignGroupId String?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([shopId, status])
+  @@index([shopId, email])
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================================================
+// A/B TESTING - Test different prices and discounts
+// ============================================================================
+
+model ABTest {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Summer Sale 10% vs 15%"
+  description String?
+  status      ABTestStatus  @default(DRAFT)
+
+  // Test type
+  testType    ABTestType    @default(PRICE)
+
+  // Targeting
+  targetType  ABTargetType  @default(ALL_VISITORS)
+  targetValue String?       // Product ID, Collection ID, or customer tag
+
+  // Traffic split
+  splitPercent Int          @default(50) // % of traffic to variant B
+
+  // Variants
+  variants    ABTestVariant[]
+
+  // Results tracking
+  results     ABTestResult[]
+
+  // Scheduling
+  startDate   DateTime?
+  endDate     DateTime?
+
+  // Winner selection
+  winnerVariantId String?
+  winnerSelectedAt DateTime?
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([shopId, status])
+}
+
+model ABTestVariant {
+  id          String        @id @default(uuid())
+  testId      String
+  test        ABTest        @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  name        String        // "Control" or "Variant B"
+  isControl   Boolean       @default(false)
+
+  // Price settings
+  priceType   ABPriceType   @default(ORIGINAL)
+  priceValue  Decimal?      @db.Decimal(10, 2) // Fixed price or percentage
+
+  // Display customization
+  customLabel String?       // e.g., "SPECIAL OFFER"
+  customColor String?       // Badge color
+
+  // Results
+  results     ABTestResult[]
+
+  @@index([testId])
+}
+
+model ABTestResult {
+  id          String        @id @default(uuid())
+  testId      String
+  test        ABTest        @relation(fields: [testId], references: [id], onDelete: Cascade)
+  variantId   String
+  variant     ABTestVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  // Visitor tracking
+  sessionId   String        // Anonymous session identifier
+  customerId  String?       // If logged in
+
+  // Event tracking
+  eventType   ABEventType
+  productId   String?
+  variantProductId String?  // Product variant ID
+
+  // Order data (for purchases)
+  orderId     String?
+  orderAmount Decimal?      @db.Decimal(10, 2)
+  quantity    Int?
+
+  createdAt   DateTime      @default(now())
+
+  @@index([testId, variantId])
+  @@index([testId, eventType])
+  @@index([sessionId])
+}
+
+enum ABTestStatus {
+  DRAFT
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+enum ABTestType {
+  PRICE           // Test different prices
+  DISCOUNT        // Test different discount percentages
+  SHIPPING        // Test free shipping thresholds
+  BUNDLE          // Test bundle pricing
+}
+
+enum ABTargetType {
+  ALL_VISITORS
+  NEW_VISITORS
+  RETURNING_VISITORS
+  SPECIFIC_PRODUCTS
+  SPECIFIC_COLLECTIONS
+  CUSTOMER_TAG
+}
+
+enum ABPriceType {
+  ORIGINAL        // Show original price (control)
+  FIXED           // Show fixed price
+  PERCENT_OFF     // Apply percentage discount
+  AMOUNT_OFF      // Apply fixed amount discount
+}
+
+enum ABEventType {
+  VIEW            // Product view
+  ADD_TO_CART     // Added to cart
+  CHECKOUT        // Started checkout
+  PURCHASE        // Completed purchase
+}
+
+// ============================================================================
+// POST-PURCHASE UPSELL - One-click upsells after checkout
+// ============================================================================
+
+model PostPurchaseOffer {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Add matching accessories"
+  status      RuleStatus    @default(DRAFT)
+
+  // Trigger conditions
+  triggerType     PPTriggerType   @default(ALL_ORDERS)
+  triggerProductIds String[]      // If specific products trigger this offer
+  triggerCollectionIds String[]   // If products from specific collections trigger
+  minOrderValue   Decimal?        @db.Decimal(10, 2) // Minimum order to show offer
+
+  // Offer settings
+  offerProductId  String          // Product to offer
+  offerVariantId  String?         // Specific variant
+  offerTitle      String?         // Custom title override
+  offerDescription String?        // Custom description
+
+  // Discount
+  discountType    DiscountType    @default(PERCENTAGE)
+  discountValue   Decimal         @db.Decimal(10, 2)
+
+  // Display settings
+  headline        String          @default("Wait! Special offer just for you")
+  subheadline     String?
+  ctaText         String          @default("Add to Order")
+  declineText     String          @default("No thanks")
+
+  // Design customization
+  bgColor         String          @default("#ffffff")
+  accentColor     String          @default("#000000")
+  textColor       String          @default("#000000")
+
+  // Timer for urgency
+  showTimer       Boolean         @default(true)
+  timerDuration   Int             @default(300) // seconds (5 min default)
+
+  // Performance tracking
+  impressions     Int             @default(0)
+  conversions     Int             @default(0)
+  revenue         Decimal         @db.Decimal(10, 2) @default(0)
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([shopId, status])
+}
+
+enum PPTriggerType {
+  ALL_ORDERS
+  SPECIFIC_PRODUCTS
+  SPECIFIC_COLLECTIONS
+  MIN_ORDER_VALUE
+  FIRST_TIME_BUYERS
+  RETURNING_CUSTOMERS
+}
+
+// ============================================================================
+// AI PRICING - Dynamic pricing suggestions
+// ============================================================================
+
+model PricingInsight {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  productId   String
+  variantId   String?
+
+  // Current pricing
+  currentPrice    Decimal     @db.Decimal(10, 2)
+  costPrice       Decimal?    @db.Decimal(10, 2)
+  currentMargin   Decimal?    @db.Decimal(5, 2)
+
+  // AI Recommendations
+  suggestedPrice  Decimal     @db.Decimal(10, 2)
+  suggestedDiscount Decimal?  @db.Decimal(5, 2)
+  confidenceScore Decimal     @db.Decimal(3, 2) // 0.00 - 1.00
+
+  // Reasoning
+  reason          String?     @db.Text
+  factors         String?     @db.Text // JSON with factors
+
+  // Demand signals
+  viewsLast7Days  Int         @default(0)
+  viewsLast30Days Int         @default(0)
+  salesLast7Days  Int         @default(0)
+  salesLast30Days Int         @default(0)
+  conversionRate  Decimal?    @db.Decimal(5, 4)
+
+  // Competitor data (if available)
+  competitorLow   Decimal?    @db.Decimal(10, 2)
+  competitorHigh  Decimal?    @db.Decimal(10, 2)
+  competitorAvg   Decimal?    @db.Decimal(10, 2)
+
+  // Status
+  status          InsightStatus @default(NEW)
+  appliedAt       DateTime?
+  dismissedAt     DateTime?
+
+  // A/B Test integration
+  linkedABTestId  String?       // If this insight was tested via A/B test
+  abTestResult    String?       // Result from A/B test (JSON)
+
+  // Auto-apply tracking
+  autoApplied     Boolean       @default(false)
+  autoApplyRuleId String?       // Which rule auto-applied this
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([shopId, status])
+  @@index([productId])
+  @@index([linkedABTestId])
+}
+
+enum InsightStatus {
+  NEW             // Fresh recommendation
+  VIEWED          // User has seen it
+  APPLIED         // User applied the suggestion
+  DISMISSED       // User dismissed it
+  EXPIRED         // Too old, no longer valid
+}
+
+// ============================================================================
+// EMAIL CAPTURE - From spin wheel and popups
+// ============================================================================
+
+model EmailCapture {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  email       String
+  phone       String?
+
+  // Source
+  source      CaptureSource
+  sourceId    String?       // Spin wheel ID, popup ID, etc.
+
+  // Prize won (if spin wheel)
+  prizeWon    String?
+  couponCode  String?
+  couponUsed  Boolean       @default(false)
+
+  // Metadata
+  ip          String?
+  userAgent   String?
+  country     String?
+  referrer    String?
+
+  // Consent
+  marketingConsent Boolean   @default(true)
+  smsConsent       Boolean   @default(false)
+
+  createdAt   DateTime      @default(now())
+
+  @@index([shopId, email])
+  @@index([shopId, source])
+  @@index([shopId, createdAt])
+}
+
+enum CaptureSource {
+  SPIN_WHEEL
+  EXIT_POPUP
+  NEWSLETTER
+  CHECKOUT
+  WHOLESALE_FORM
+}
+
+// ============================================================================
+// COMPETITOR PRICE TRACKING - Monitor competitor prices
+// ============================================================================
+
+model CompetitorPrice {
+  id            String        @id @default(uuid())
+  shopId        String
+
+  // Product mapping
+  productId     String        // Our product ID
+  variantId     String?
+  productTitle  String?       // For reference
+  sku           String?       // For matching
+
+  // Competitor info
+  competitorName    String    // e.g., "Amazon", "eBay", "Competitor Store"
+  competitorUrl     String?   // URL to competitor product page
+  competitorPrice   Decimal   @db.Decimal(10, 2)
+  competitorCurrency String   @default("USD")
+
+  // Price history tracking
+  previousPrice     Decimal?  @db.Decimal(10, 2)
+  priceChangePercent Decimal? @db.Decimal(5, 2)
+  priceDirection    PriceDirection?
+
+  // Data source
+  source        CompetitorSource  @default(MANUAL)
+  isVerified    Boolean           @default(false)
+  lastVerified  DateTime?
+
+  // Auto-fetch settings
+  autoFetch     Boolean           @default(false)
+  fetchFrequency FetchFrequency?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([shopId, productId])
+  @@index([shopId, competitorName])
+  @@unique([shopId, productId, competitorName])
+}
+
+enum PriceDirection {
+  UP
+  DOWN
+  STABLE
+}
+
+enum CompetitorSource {
+  MANUAL          // Manually entered by user
+  API             // From price monitoring API (Prisync, Competera)
+  SCRAPER         // Web scraping service
+  GOOGLE_SHOPPING // Google Shopping API
+  AMAZON          // Amazon Product API
+}
+
+enum FetchFrequency {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ============================================================================
+// PRODUCT ANALYTICS HISTORY - Daily analytics tracking
+// ============================================================================
+
+model ProductAnalyticsHistory {
+  id          String        @id @default(uuid())
+  shopId      String
+  productId   String
+  variantId   String?
+
+  // Date for this record (one per day per product)
+  date        DateTime      @db.Date
+
+  // Traffic metrics
+  pageViews       Int       @default(0)
+  uniqueVisitors  Int       @default(0)
+  addToCartCount  Int       @default(0)
+
+  // Sales metrics
+  unitsSold       Int       @default(0)
+  revenue         Decimal   @db.Decimal(10, 2) @default(0)
+  averagePrice    Decimal?  @db.Decimal(10, 2)
+
+  // Calculated metrics
+  conversionRate  Decimal?  @db.Decimal(5, 4) // pageViews > 0 ? unitsSold / pageViews : null
+  cartRate        Decimal?  @db.Decimal(5, 4) // pageViews > 0 ? addToCartCount / pageViews : null
+
+  // Inventory snapshot
+  inventoryLevel  Int       @default(0)
+
+  // Source of data
+  dataSource      AnalyticsSource @default(ESTIMATED)
+
+  createdAt       DateTime  @default(now())
+
+  @@unique([shopId, productId, date])
+  @@index([shopId, date])
+  @@index([productId, date])
+}
+
+enum AnalyticsSource {
+  ESTIMATED       // Calculated from sales data
+  SHOPIFY_API     // From Shopify Analytics API
+  GOOGLE_ANALYTICS // From Google Analytics
+  MANUAL          // Manually entered
+}
+
+// ============================================================================
+// PRICE HISTORY - Track all price changes
+// ============================================================================
+
+model PriceHistory {
+  id          String        @id @default(uuid())
+  shopId      String
+  productId   String
+  variantId   String?
+
+  // Price change
+  oldPrice    Decimal       @db.Decimal(10, 2)
+  newPrice    Decimal       @db.Decimal(10, 2)
+  changePercent Decimal     @db.Decimal(5, 2)
+
+  // Source of change
+  changeSource    PriceChangeSource
+  changeReason    String?       // e.g., "AI Suggestion Applied", "Manual Update"
+  insightId       String?       // Link to PricingInsight if AI-suggested
+  abTestId        String?       // Link to ABTest if from A/B test
+
+  // Performance tracking (filled in after change)
+  salesBefore7d   Int?          // Sales 7 days before change
+  salesAfter7d    Int?          // Sales 7 days after change
+  revenueBefore7d Decimal?      @db.Decimal(10, 2)
+  revenueAfter7d  Decimal?      @db.Decimal(10, 2)
+
+  // Calculated impact (updated via cron)
+  salesImpact     Decimal?      @db.Decimal(5, 2) // % change in sales
+  revenueImpact   Decimal?      @db.Decimal(5, 2) // % change in revenue
+  isPositive      Boolean?      // Overall positive impact?
+
+  createdAt       DateTime      @default(now())
+
+  @@index([shopId, productId])
+  @@index([shopId, createdAt])
+  @@index([insightId])
+}
+
+enum PriceChangeSource {
+  MANUAL          // User changed price manually
+  AI_AUTO_APPLY   // AI auto-applied
+  AI_USER_APPLY   // User applied AI suggestion
+  AB_TEST         // From A/B test winner
+  BULK_UPDATE     // Bulk price update
+  SHOPIFY_SYNC    // Synced from Shopify
+}
+
+// ============================================================================
+// ML MODEL CONFIG - AI pricing model configuration
+// ============================================================================
+
+model MLModelConfig {
+  id          String        @id @default(uuid())
+  shopId      String        @unique
+
+  // Feature weights (0-1, must sum to 1)
+  weightDemand        Decimal @db.Decimal(3, 2) @default(0.25)
+  weightInventory     Decimal @db.Decimal(3, 2) @default(0.20)
+  weightCompetitor    Decimal @db.Decimal(3, 2) @default(0.20)
+  weightConversion    Decimal @db.Decimal(3, 2) @default(0.15)
+  weightMargin        Decimal @db.Decimal(3, 2) @default(0.10)
+  weightSeasonality   Decimal @db.Decimal(3, 2) @default(0.10)
+
+  // Price constraints
+  minMarginPercent    Decimal @db.Decimal(5, 2) @default(10) // Never go below 10% margin
+  maxPriceIncrease    Decimal @db.Decimal(5, 2) @default(20) // Max 20% increase
+  maxPriceDecrease    Decimal @db.Decimal(5, 2) @default(25) // Max 25% decrease
+
+  // Default elasticity (used when no data)
+  defaultElasticity   Decimal @db.Decimal(4, 2) @default(-1.5) // Price elasticity of demand
+
+  // Confidence thresholds
+  minConfidenceShow   Decimal @db.Decimal(3, 2) @default(0.50) // Min confidence to show insight
+  minConfidenceApply  Decimal @db.Decimal(3, 2) @default(0.85) // Min confidence for auto-apply
+
+  // Learning settings
+  learningEnabled     Boolean @default(true)  // Learn from applied insights
+  learningRate        Decimal @db.Decimal(4, 3) @default(0.05) // How fast to adjust
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([shopId])
+}
+
+// ============================================================================
+// AUTO-APPLY RULES - Automated price application settings
+// ============================================================================
+
+model AutoApplyRule {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "High Confidence Auto-Apply"
+  status      RuleStatus    @default(DRAFT)
+  priority    Int           @default(0)
+
+  // Conditions
+  minConfidence       Decimal @db.Decimal(3, 2) @default(0.85)
+  maxPriceChangePercent Decimal @db.Decimal(5, 2) @default(15)
+  requirePositiveMargin Boolean @default(true)
+  minMarginPercent    Decimal? @db.Decimal(5, 2)
+
+  // Targeting
+  applyToAllProducts  Boolean @default(false)
+  includedProductIds  String[] // Products to include (if not all)
+  excludedProductIds  String[] // Products to always exclude
+  includedCollections String[] // Collections to include
+  excludedCollections String[] // Collections to exclude
+
+  // Direction filter
+  allowIncrease       Boolean @default(true)
+  allowDecrease       Boolean @default(true)
+
+  // Rate limiting
+  maxAppliesPerDay    Int     @default(10)   // Max auto-applies per day
+  cooldownHours       Int     @default(24)   // Hours between changes to same product
+
+  // Notifications
+  notifyOnApply       Boolean @default(true)
+  notifyEmail         String?
+
+  // Audit
+  totalApplied        Int     @default(0)
+  lastAppliedAt       DateTime?
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([shopId, status])
+}
+
+// ============================================================================
+// AUTO-APPLY LOG - Track all automatic price changes
+// ============================================================================
+
+model AutoApplyLog {
+  id          String        @id @default(uuid())
+  shopId      String
+  ruleId      String        // Which AutoApplyRule triggered this
+  insightId   String        // Which PricingInsight was applied
+
+  productId   String
+  variantId   String?
+  productTitle String?
+
+  // Price change details
+  oldPrice    Decimal       @db.Decimal(10, 2)
+  newPrice    Decimal       @db.Decimal(10, 2)
+  changePercent Decimal     @db.Decimal(5, 2)
+  confidence  Decimal       @db.Decimal(3, 2)
+
+  // Result
+  status      AutoApplyStatus
+  errorMessage String?
+
+  // Shopify API response
+  shopifyResponse String?   @db.Text
+
+  createdAt   DateTime      @default(now())
+
+  @@index([shopId, createdAt])
+  @@index([ruleId])
+  @@index([productId])
+}
+
+enum AutoApplyStatus {
+  SUCCESS
+  FAILED
+  REVERTED
+  SKIPPED
+}
+
+// ============================================================================
+// PRICE ELASTICITY - Learned elasticity per product
+// ============================================================================
+
+model PriceElasticity {
+  id          String        @id @default(uuid())
+  shopId      String
+  productId   String
+
+  // Elasticity value (negative = normal goods)
+  elasticity  Decimal       @db.Decimal(4, 2) // e.g., -1.5 means 1% price increase = 1.5% demand decrease
+
+  // Confidence in this estimate
+  confidence  Decimal       @db.Decimal(3, 2) @default(0.50)
+
+  // Data points used to calculate
+  dataPoints  Int           @default(0)
+
+  // Source
+  source      ElasticitySource @default(DEFAULT)
+
+  // Last calculation details
+  lastCalculatedAt DateTime?
+  calculationDetails String? @db.Text // JSON with calculation breakdown
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([shopId, productId])
+  @@index([shopId])
+}
+
+enum ElasticitySource {
+  DEFAULT         // Using category/shop default
+  CALCULATED      // Calculated from price history
+  AB_TEST         // Learned from A/B test
+  MANUAL          // Manually set
+}

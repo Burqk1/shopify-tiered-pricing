@@ -1,0 +1,37 @@
+# Pricing Table Theme App Extension
+# Displays tiered pricing table on product pages
+
+api_version = "2025-01"
+
+[[extensions]]
+
+uid = "6dfe3d31-53bb-ae65-31ac-f6e1e59d7ac6cb33d7bc"
+
+type = "theme"
+name = "Tiered Pricing Table"
+handle = "pricing-table"
+
+  [[extensions.blocks]]
+  type = "tier-table"
+  name = "Volume Discount Table"
+  target = "section"
+
+  [[extensions.blocks]]
+  type = "countdown-timer"
+  name = "Countdown Timer"
+  target = "section"
+
+  [[extensions.blocks]]
+  type = "free-shipping-bar"
+  name = "Free Shipping Bar"
+  target = "section"
+
+  [[extensions.blocks]]
+  type = "cart-upsell"
+  name = "Cart Upsell"
+  target = "section"
+
+  [[extensions.blocks]]
+  type = "spin-wheel"
+  name = "Spin Wheel Popup"
+  target = "section"

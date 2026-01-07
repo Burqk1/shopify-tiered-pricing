@@ -1,0 +1,74 @@
+{
+  "tier_table": {
+    "title": "Toplu Alım İndirimleri",
+    "quantity": "Adet",
+    "discount": "İndirim",
+    "price": "Fiyat",
+    "you_save": "Kazancınız",
+    "best_value": "En Avantajlı",
+    "buy_more_save_more": "Çok Al, Çok Kazan!",
+    "add_items": "{{ discount }} indirim için {{ count }} adet daha ekleyin",
+    "units": "adet",
+    "per_item": "adet başına",
+    "off": "indirim"
+  },
+  "countdown_timer": {
+    "sale_ends": "Kampanya bitimine:",
+    "days": "Gün",
+    "hours": "Saat",
+    "mins": "Dk",
+    "secs": "Sn",
+    "expired": "Kampanya sona erdi",
+    "hurry": "Acele edin! Sınırlı süreli teklif"
+  },
+  "free_shipping": {
+    "progress": "ÜCRETSİZ KARGO için {{ amount }} daha ekleyin!",
+    "success": "Tebrikler! ÜCRETSİZ KARGO kazandınız!",
+    "empty": "ÜCRETSİZ KARGO için sepetinize {{ amount }} ekleyin!",
+    "free": "ÜCRETSİZ",
+    "shipping": "Kargo"
+  },
+  "cart_upsell": {
+    "title": "Siparişinizi Tamamlayın",
+    "subtitle": "Bu ürünleri ekleyin ve tasarruf edin!",
+    "add_to_cart": "Sepete Ekle",
+    "added": "Eklendi!",
+    "bundle_save": "BİRLİKTE AL & KAZAN",
+    "frequently_bought": "Birlikte Sıkça Alınanlar",
+    "you_may_like": "Bunları da Beğenebilirsiniz"
+  },
+  "general": {
+    "loading": "Yükleniyor...",
+    "error": "Bir hata oluştu",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "close": "Kapat"
+  },
+  "spin_wheel": {
+    "badge": "Sınırlı Süreli Teklif",
+    "title": "Çevir & Kazan!",
+    "subtitle": "Şansını dene, harika indirimler kazan!",
+    "email_placeholder": "E-posta adresiniz",
+    "phone_placeholder": "Telefon numarası (opsiyonel)",
+    "spin_button": "ÇARKI ÇEVİR",
+    "terms": "Çevirerek pazarlama e-postaları almayı kabul ediyorsunuz.",
+    "win_title": "Tebrikler!",
+    "win_message": "Ödemenizi yaparken bu kodu kullanın!",
+    "coupon_label": "İndirim Kodunuz",
+    "copy_button": "Kodu Kopyala",
+    "copied": "Kopyalandı!",
+    "shop_now": "Alışverişe Başla",
+    "trigger_text": "Çevir & Kazan!"
+  },
+  "post_purchase": {
+    "headline": "Dur! Size Özel Teklif",
+    "subheadline": "Şimdi siparişinize ekleyin ve tasarruf edin!",
+    "cta_button": "Siparişe Ekle - Tek Tık",
+    "decline": "Hayır, teşekkürler",
+    "timer_prefix": "Teklif sona eriyor:",
+    "secure": "Güvenli ödeme",
+    "no_extra_payment": "Ekstra ödeme yok",
+    "ships_together": "Siparişinizle birlikte gönderilir",
+    "added": "Siparişinize eklendi!"
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "tier_table": {
+    "title": "Mengenrabatte",
+    "quantity": "Menge",
+    "discount": "Rabatt",
+    "price": "Preis",
+    "you_save": "Sie sparen",
+    "best_value": "Bester Wert",
+    "buy_more_save_more": "Mehr kaufen, mehr sparen!",
+    "add_items": "Fügen Sie {{ count }} weitere hinzu für {{ discount }} Rabatt",
+    "units": "Stück",
+    "per_item": "pro Stück",
+    "off": "Rabatt"
+  },
+  "countdown_timer": {
+    "sale_ends": "Angebot endet in:",
+    "days": "Tage",
+    "hours": "Std",
+    "mins": "Min",
+    "secs": "Sek",
+    "expired": "Angebot beendet",
+    "hurry": "Beeilen Sie sich! Zeitlich begrenztes Angebot"
+  },
+  "free_shipping": {
+    "progress": "Noch {{ amount }} für KOSTENLOSEN VERSAND!",
+    "success": "Herzlichen Glückwunsch! Sie haben KOSTENLOSEN VERSAND freigeschaltet!",
+    "empty": "Fügen Sie {{ amount }} hinzu für KOSTENLOSEN VERSAND!",
+    "free": "KOSTENLOS",
+    "shipping": "Versand"
+  },
+  "cart_upsell": {
+    "title": "Bestellung abschließen",
+    "subtitle": "Fügen Sie diese Artikel hinzu und sparen Sie!",
+    "add_to_cart": "In den Warenkorb",
+    "added": "Hinzugefügt!",
+    "bundle_save": "BUNDLE & SPAREN",
+    "frequently_bought": "Häufig zusammen gekauft",
+    "you_may_like": "Das könnte Ihnen auch gefallen"
+  },
+  "general": {
+    "loading": "Lädt...",
+    "error": "Etwas ist schief gelaufen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen"
+  },
+  "spin_wheel": {
+    "badge": "Zeitlich begrenztes Angebot",
+    "title": "Drehen & Gewinnen!",
+    "subtitle": "Versuchen Sie Ihr Glück und gewinnen Sie tolle Rabatte!",
+    "email_placeholder": "Ihre E-Mail-Adresse",
+    "phone_placeholder": "Telefonnummer (optional)",
+    "spin_button": "RAD DREHEN",
+    "terms": "Mit dem Drehen stimmen Sie zu, Marketing-E-Mails zu erhalten.",
+    "win_title": "Herzlichen Glückwunsch!",
+    "win_message": "Verwenden Sie diesen Code an der Kasse, um Ihren Preis einzulösen!",
+    "coupon_label": "Ihr Rabattcode",
+    "copy_button": "Code kopieren",
+    "copied": "Kopiert!",
+    "shop_now": "Jetzt einkaufen",
+    "trigger_text": "Drehen & Gewinnen!"
+  },
+  "post_purchase": {
+    "headline": "Halt! Sonderangebot nur für Sie",
+    "subheadline": "Fügen Sie dies jetzt Ihrer Bestellung hinzu und sparen Sie!",
+    "cta_button": "Zur Bestellung hinzufügen - Ein Klick",
+    "decline": "Nein danke",
+    "timer_prefix": "Angebot läuft ab in:",
+    "secure": "Sichere Zahlung",
+    "no_extra_payment": "Keine zusätzliche Zahlung erforderlich",
+    "ships_together": "Wird mit Ihrer Bestellung versendet",
+    "added": "Zu Ihrer Bestellung hinzugefügt!"
+  }
+}

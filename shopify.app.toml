@@ -1,0 +1,38 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+name = "Tiered Pricing"
+client_id = "cf2600a5c8daa3bd218919c160f1d550"
+application_url = "https://tiered-pricing-10.vercel.app"
+embedded = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "write_products,read_products,write_discounts,read_discounts,write_customers,read_customers,read_metaobjects,write_metaobjects"
+
+[auth]
+redirect_urls = [
+  "https://tiered-pricing-10.vercel.app/auth/callback",
+  "https://tiered-pricing-10.vercel.app/auth/shopify/callback",
+  "https://tiered-pricing-10.vercel.app/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [webhooks.privacy_compliance]
+  customer_deletion_url = "https://tiered-pricing-10.vercel.app/webhooks/customers/redact"
+  customer_data_request_url = "https://tiered-pricing-10.vercel.app/webhooks/customers/data_request"
+  shop_deletion_url = "https://tiered-pricing-10.vercel.app/webhooks/shop/redact"
+
+[pos]
+embedded = false
+
+# App Proxy - Theme Extension'ın storefront'tan API'ye erişmesi için
+[app_proxy]
+url = "https://tiered-pricing-10.vercel.app/api"
+subpath = "tiered-pricing"
+prefix = "apps"
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "novamentstudios-2.myshopify.com"

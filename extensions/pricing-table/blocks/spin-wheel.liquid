@@ -1,0 +1,573 @@
+{% comment %}
+  Spin Wheel Gamification Block
+  Optimized version with essential settings only
+  Email capture with probability-based wheel prizes
+{% endcomment %}
+
+{% style %}
+  .spin-wheel-trigger-{{ block.id }} {
+    position: fixed;
+    {{ block.settings.position }}: 20px;
+    bottom: 20px;
+    z-index: 2147483640;
+    background: linear-gradient(135deg, {{ block.settings.primary_color }}, {{ block.settings.secondary_color }});
+    color: #fff;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .spin-wheel-trigger-{{ block.id }}:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  .spin-wheel-overlay-{{ block.id }} {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 2147483645;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s ease;
+  }
+
+  .spin-wheel-overlay-{{ block.id }}.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .spin-wheel-container-{{ block.id }} {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    z-index: 2147483646;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .spin-wheel-container-{{ block.id }}.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .spin-wheel-popup-{{ block.id }} {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+    border-radius: 24px;
+    padding: 32px;
+    max-width: 420px;
+    width: 95vw;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5);
+  }
+
+  .spin-wheel-close-{{ block.id }} {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .spin-wheel-badge-{{ block.id }} {
+    display: inline-block;
+    background: linear-gradient(135deg, {{ block.settings.primary_color }}, {{ block.settings.secondary_color }});
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+
+  .spin-wheel-title-{{ block.id }} {
+    color: #fff;
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 8px;
+  }
+
+  .spin-wheel-subtitle-{{ block.id }} {
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    margin: 0 0 24px;
+  }
+
+  .spin-wheel-wrapper-{{ block.id }} {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto 24px;
+  }
+
+  .spin-wheel-canvas-{{ block.id }} {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow: 0 0 0 8px {{ block.settings.primary_color }}, 0 0 30px rgba(0,0,0,0.5);
+  }
+
+  .spin-wheel-pointer-{{ block.id }} {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 30px solid {{ block.settings.primary_color }};
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+    z-index: 10;
+  }
+
+  .spin-wheel-center-{{ block.id }} {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, {{ block.settings.primary_color }}, {{ block.settings.secondary_color }});
+    border-radius: 50%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 24px;
+    z-index: 5;
+  }
+
+  .spin-wheel-form-{{ block.id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .spin-wheel-input-{{ block.id }} {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    color: #fff;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+  }
+
+  .spin-wheel-input-{{ block.id }}::placeholder {
+    color: rgba(255,255,255,0.5);
+  }
+
+  .spin-wheel-input-{{ block.id }}:focus {
+    border-color: {{ block.settings.primary_color }};
+  }
+
+  .spin-wheel-btn-{{ block.id }} {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, {{ block.settings.primary_color }}, {{ block.settings.secondary_color }});
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .spin-wheel-btn-{{ block.id }}:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  }
+
+  .spin-wheel-btn-{{ block.id }}:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .spin-wheel-terms-{{ block.id }} {
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    margin-top: 8px;
+  }
+
+  .spin-wheel-result-{{ block.id }} {
+    display: none;
+  }
+
+  .spin-wheel-result-{{ block.id }}.active {
+    display: block;
+  }
+
+  .spin-wheel-prize-{{ block.id }} {
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    border: 2px dashed {{ block.settings.primary_color }};
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+
+  .spin-wheel-code-{{ block.id }} {
+    font-size: 28px;
+    font-weight: 800;
+    color: {{ block.settings.primary_color }};
+    letter-spacing: 3px;
+    margin: 8px 0;
+  }
+
+  .spin-wheel-copy-{{ block.id }} {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.3s;
+  }
+
+  .spin-wheel-copy-{{ block.id }}:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .spin-wheel-confetti-{{ block.id }} {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2147483647;
+  }
+
+  @media (max-width: 480px) {
+    .spin-wheel-popup-{{ block.id }} {
+      padding: 24px 16px;
+    }
+    .spin-wheel-wrapper-{{ block.id }} {
+      width: 220px;
+      height: 220px;
+    }
+    .spin-wheel-title-{{ block.id }} {
+      font-size: 22px;
+    }
+  }
+{% endstyle %}
+
+<!-- Trigger Button -->
+<button class="spin-wheel-trigger-{{ block.id }}" id="spin-trigger-{{ block.id }}" aria-label="{{ block.settings.trigger_text }}">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+  </svg>
+  {{ block.settings.trigger_text | default: "Spin & Win!" }}
+</button>
+
+<!-- Overlay -->
+<div class="spin-wheel-overlay-{{ block.id }}" id="spin-overlay-{{ block.id }}"></div>
+
+<!-- Popup -->
+<div class="spin-wheel-container-{{ block.id }}" id="spin-container-{{ block.id }}">
+  <div class="spin-wheel-popup-{{ block.id }}">
+    <button class="spin-wheel-close-{{ block.id }}" id="spin-close-{{ block.id }}" aria-label="Close">&times;</button>
+
+    <div class="spin-wheel-badge-{{ block.id }}">{{ 'spin_wheel.badge' | t }}</div>
+    <h2 class="spin-wheel-title-{{ block.id }}">{{ 'spin_wheel.title' | t }}</h2>
+    <p class="spin-wheel-subtitle-{{ block.id }}">{{ 'spin_wheel.subtitle' | t }}</p>
+
+    <!-- Wheel -->
+    <div class="spin-wheel-wrapper-{{ block.id }}">
+      <div class="spin-wheel-pointer-{{ block.id }}"></div>
+      <canvas class="spin-wheel-canvas-{{ block.id }}" id="spin-canvas-{{ block.id }}" width="280" height="280"></canvas>
+      <div class="spin-wheel-center-{{ block.id }}">&#127881;</div>
+    </div>
+
+    <!-- Form -->
+    <div id="spin-form-{{ block.id }}" class="spin-wheel-form-{{ block.id }}">
+      <input type="email" class="spin-wheel-input-{{ block.id }}" id="spin-email-{{ block.id }}" placeholder="{{ 'spin_wheel.email_placeholder' | t }}" required>
+      <button type="button" class="spin-wheel-btn-{{ block.id }}" id="spin-btn-{{ block.id }}">{{ 'spin_wheel.spin_button' | t }}</button>
+      <p class="spin-wheel-terms-{{ block.id }}">{{ 'spin_wheel.terms' | t }}</p>
+    </div>
+
+    <!-- Result -->
+    <div id="spin-result-{{ block.id }}" class="spin-wheel-result-{{ block.id }}">
+      <h3 class="spin-wheel-title-{{ block.id }}" style="font-size:24px;">{{ 'spin_wheel.win_title' | t }}</h3>
+      <p class="spin-wheel-subtitle-{{ block.id }}">{{ 'spin_wheel.win_message' | t }}</p>
+      <div class="spin-wheel-prize-{{ block.id }}">
+        <small style="color:rgba(255,255,255,0.6);">{{ 'spin_wheel.coupon_label' | t }}</small>
+        <div class="spin-wheel-code-{{ block.id }}" id="spin-code-{{ block.id }}"></div>
+        <button class="spin-wheel-copy-{{ block.id }}" id="spin-copy-{{ block.id }}">{{ 'spin_wheel.copy_button' | t }}</button>
+      </div>
+      <a href="/collections/all" class="spin-wheel-btn-{{ block.id }}" style="display:inline-block;text-decoration:none;margin-top:12px;">{{ 'spin_wheel.shop_now' | t }}</a>
+    </div>
+  </div>
+</div>
+
+<!-- Confetti Container -->
+<canvas class="spin-wheel-confetti-{{ block.id }}" id="spin-confetti-{{ block.id }}"></canvas>
+
+<script>
+(function() {
+  const blockId = '{{ block.id }}';
+  const prizes = [
+    { text: '10% OFF', code: 'SPIN10', color: '#FF6B6B' },
+    { text: '15% OFF', code: 'SPIN15', color: '#4ECDC4' },
+    { text: 'FREE SHIP', code: 'FREESHIP', color: '#45B7D1' },
+    { text: '20% OFF', code: 'SPIN20', color: '#96CEB4' },
+    { text: '5% OFF', code: 'SPIN5', color: '#FFEAA7' },
+    { text: '25% OFF', code: 'SPIN25', color: '#DDA0DD' }
+  ];
+  const probabilities = [30, 25, 20, 15, 8, 2];
+
+  let isSpinning = false;
+  let currentRotation = 0;
+
+  const trigger = document.getElementById('spin-trigger-' + blockId);
+  const overlay = document.getElementById('spin-overlay-' + blockId);
+  const container = document.getElementById('spin-container-' + blockId);
+  const closeBtn = document.getElementById('spin-close-' + blockId);
+  const canvas = document.getElementById('spin-canvas-' + blockId);
+  const spinBtn = document.getElementById('spin-btn-' + blockId);
+  const emailInput = document.getElementById('spin-email-' + blockId);
+  const formEl = document.getElementById('spin-form-' + blockId);
+  const resultEl = document.getElementById('spin-result-' + blockId);
+  const codeEl = document.getElementById('spin-code-' + blockId);
+  const copyBtn = document.getElementById('spin-copy-' + blockId);
+  const confettiCanvas = document.getElementById('spin-confetti-' + blockId);
+
+  // Check if already spun
+  if (localStorage.getItem('spin_wheel_used_' + blockId)) {
+    trigger.style.display = 'none';
+  }
+
+  // Draw wheel
+  function drawWheel() {
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = Math.min(centerX, centerY) - 5;
+    const segmentAngle = (2 * Math.PI) / prizes.length;
+
+    prizes.forEach((prize, i) => {
+      const startAngle = i * segmentAngle - Math.PI / 2;
+      const endAngle = startAngle + segmentAngle;
+
+      ctx.beginPath();
+      ctx.moveTo(centerX, centerY);
+      ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+      ctx.closePath();
+      ctx.fillStyle = prize.color;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Text
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(startAngle + segmentAngle / 2);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 13px Arial';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(prize.text, radius - 15, 5);
+      ctx.restore();
+    });
+  }
+
+  drawWheel();
+
+  // Open popup
+  function openPopup() {
+    overlay.classList.add('active');
+    container.classList.add('active');
+  }
+
+  // Close popup
+  function closePopup() {
+    overlay.classList.remove('active');
+    container.classList.remove('active');
+  }
+
+  trigger.addEventListener('click', openPopup);
+  closeBtn.addEventListener('click', closePopup);
+  overlay.addEventListener('click', closePopup);
+
+  // Get weighted random prize
+  function getWeightedPrize() {
+    const total = probabilities.reduce((a, b) => a + b, 0);
+    let random = Math.random() * total;
+    for (let i = 0; i < probabilities.length; i++) {
+      random -= probabilities[i];
+      if (random <= 0) return i;
+    }
+    return 0;
+  }
+
+  // Spin wheel
+  spinBtn.addEventListener('click', function() {
+    const email = emailInput.value.trim();
+    if (!email || !email.includes('@')) {
+      emailInput.style.borderColor = '#ff4444';
+      return;
+    }
+
+    if (isSpinning) return;
+    isSpinning = true;
+    spinBtn.disabled = true;
+    spinBtn.textContent = 'Spinning...';
+
+    const prizeIndex = getWeightedPrize();
+    const segmentAngle = 360 / prizes.length;
+    const targetAngle = 360 - (prizeIndex * segmentAngle + segmentAngle / 2);
+    const spins = 5 + Math.random() * 3;
+    const totalRotation = spins * 360 + targetAngle;
+
+    canvas.style.transition = 'transform 5s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+    canvas.style.transform = 'rotate(' + (currentRotation + totalRotation) + 'deg)';
+    currentRotation += totalRotation;
+
+    setTimeout(function() {
+      isSpinning = false;
+      localStorage.setItem('spin_wheel_used_' + blockId, 'true');
+
+      // Show result
+      formEl.style.display = 'none';
+      resultEl.classList.add('active');
+      codeEl.textContent = prizes[prizeIndex].code;
+
+      // Confetti
+      launchConfetti();
+
+      // Hide trigger
+      trigger.style.display = 'none';
+
+      // Save email (you can send to your backend)
+      console.log('Email captured:', email, 'Prize:', prizes[prizeIndex].code);
+    }, 5500);
+  });
+
+  // Copy code
+  copyBtn.addEventListener('click', function() {
+    navigator.clipboard.writeText(codeEl.textContent);
+    copyBtn.textContent = '{{ "spin_wheel.copied" | t }}';
+    setTimeout(() => copyBtn.textContent = '{{ "spin_wheel.copy_button" | t }}', 2000);
+  });
+
+  // Simple confetti
+  function launchConfetti() {
+    const ctx = confettiCanvas.getContext('2d');
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+
+    const particles = [];
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#FFD700'];
+
+    for (let i = 0; i < 150; i++) {
+      particles.push({
+        x: Math.random() * confettiCanvas.width,
+        y: Math.random() * confettiCanvas.height - confettiCanvas.height,
+        w: Math.random() * 10 + 5,
+        h: Math.random() * 6 + 4,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speed: Math.random() * 3 + 2,
+        angle: Math.random() * Math.PI * 2,
+        spin: Math.random() * 0.2 - 0.1
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      let active = false;
+
+      particles.forEach(p => {
+        if (p.y < confettiCanvas.height) {
+          active = true;
+          p.y += p.speed;
+          p.x += Math.sin(p.angle) * 2;
+          p.angle += p.spin;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+          ctx.restore();
+        }
+      });
+
+      if (active) requestAnimationFrame(animate);
+    }
+
+    animate();
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Spin Wheel",
+  "target": "section",
+  "settings": [
+    {
+      "type": "color",
+      "id": "primary_color",
+      "label": "Primary Color",
+      "default": "#FF6B6B"
+    },
+    {
+      "type": "color",
+      "id": "secondary_color",
+      "label": "Secondary Color",
+      "default": "#FFD93D"
+    },
+    {
+      "type": "text",
+      "id": "trigger_text",
+      "label": "Button Text",
+      "default": "Spin & Win!"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Button Position",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    }
+  ]
+}
+{% endschema %}

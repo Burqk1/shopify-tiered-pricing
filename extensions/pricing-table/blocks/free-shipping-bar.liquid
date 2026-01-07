@@ -1,0 +1,634 @@
+{% comment %}
+  Free Shipping Progress Bar Block
+  Shows progress towards free shipping threshold
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Free Shipping Bar",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Threshold Settings"
+    },
+    {
+      "type": "number",
+      "id": "threshold",
+      "label": "Free Shipping Threshold",
+      "default": 100,
+      "info": "Cart value needed for free shipping"
+    },
+    {
+      "type": "text",
+      "id": "currency_symbol",
+      "label": "Currency Symbol",
+      "default": "$"
+    },
+    {
+      "type": "header",
+      "content": "Messages"
+    },
+    {
+      "type": "text",
+      "id": "progress_message",
+      "label": "Progress Message",
+      "default": "Add {amount} more for FREE SHIPPING!",
+      "info": "Use {amount} for remaining amount, {progress} for percentage"
+    },
+    {
+      "type": "text",
+      "id": "success_message",
+      "label": "Success Message",
+      "default": "Congratulations! You've unlocked FREE SHIPPING!"
+    },
+    {
+      "type": "text",
+      "id": "empty_cart_message",
+      "label": "Empty Cart Message",
+      "default": "Add {amount} to your cart for FREE SHIPPING!"
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        { "value": "banner", "label": "Full Width Banner" },
+        { "value": "minimal", "label": "Minimal Bar" },
+        { "value": "floating", "label": "Floating Badge" },
+        { "value": "announcement", "label": "Announcement Bar" }
+      ],
+      "default": "banner"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "Position",
+      "options": [
+        { "value": "inline", "label": "Inline" },
+        { "value": "top-fixed", "label": "Fixed Top" },
+        { "value": "bottom-fixed", "label": "Fixed Bottom" }
+      ],
+      "default": "inline"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress_bar",
+      "label": "Show Progress Bar",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_icon",
+      "label": "Show Shipping Icon",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background Color",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "progress_color",
+      "label": "Progress Bar Color",
+      "default": "#28a745"
+    },
+    {
+      "type": "color",
+      "id": "progress_bg_color",
+      "label": "Progress Bar Background",
+      "default": "#e9ecef"
+    },
+    {
+      "type": "color",
+      "id": "success_bg_color",
+      "label": "Success Background Color",
+      "default": "#d4edda"
+    },
+    {
+      "type": "color",
+      "id": "success_text_color",
+      "label": "Success Text Color",
+      "default": "#155724"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate_progress",
+      "label": "Animate Progress Bar",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "celebrate_success",
+      "label": "Celebrate on Success",
+      "default": true,
+      "info": "Show confetti animation when threshold is reached"
+    }
+  ]
+}
+{% endschema %}
+
+<div
+  class="fsb-container fsb-style-{{ block.settings.style }} fsb-pos-{{ block.settings.position }}"
+  id="free-shipping-bar-{{ block.id }}"
+  data-threshold="{{ block.settings.threshold }}"
+  data-currency="{{ block.settings.currency_symbol }}"
+  data-progress-message="{{ block.settings.progress_message }}"
+  data-success-message="{{ block.settings.success_message }}"
+  data-empty-message="{{ block.settings.empty_cart_message }}"
+  data-animate="{{ block.settings.animate_progress }}"
+  data-celebrate="{{ block.settings.celebrate_success }}"
+  style="
+    --fsb-bg: {{ block.settings.bg_color }};
+    --fsb-text: {{ block.settings.text_color }};
+    --fsb-progress: {{ block.settings.progress_color }};
+    --fsb-progress-bg: {{ block.settings.progress_bg_color }};
+    --fsb-success-bg: {{ block.settings.success_bg_color }};
+    --fsb-success-text: {{ block.settings.success_text_color }};
+  "
+>
+  <div class="fsb-inner">
+    {% if block.settings.show_icon %}
+    <div class="fsb-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1" y="3" width="15" height="13"></rect>
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+      </svg>
+    </div>
+    {% endif %}
+
+    <div class="fsb-content">
+      <div class="fsb-message" id="fsb-message-{{ block.id }}">
+        {%- assign amount_placeholder = '{amount}' -%}
+        {%- capture amount_text -%}{{ block.settings.currency_symbol }}{{ block.settings.threshold }}{%- endcapture -%}
+        {{ block.settings.empty_cart_message | replace: amount_placeholder, amount_text }}
+      </div>
+
+      {% if block.settings.show_progress_bar %}
+      <div class="fsb-progress-wrapper">
+        <div class="fsb-progress-bar">
+          <div class="fsb-progress-fill" id="fsb-progress-{{ block.id }}" style="width: 0%"></div>
+        </div>
+        <div class="fsb-progress-text" id="fsb-progress-text-{{ block.id }}">0%</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Confetti container -->
+  <div class="fsb-confetti" id="fsb-confetti-{{ block.id }}"></div>
+</div>
+
+<style>
+  .fsb-container {
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+
+  .fsb-container * {
+    box-sizing: border-box;
+  }
+
+  /* Banner Style */
+  .fsb-style-banner {
+    background-color: var(--fsb-bg);
+    color: var(--fsb-text);
+    padding: 16px 24px;
+    border-radius: 8px;
+    margin: 16px 0;
+  }
+
+  .fsb-style-banner .fsb-inner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .fsb-style-banner .fsb-content {
+    flex: 1;
+  }
+
+  .fsb-style-banner .fsb-message {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+
+  /* Minimal Style */
+  .fsb-style-minimal {
+    background-color: var(--fsb-bg);
+    color: var(--fsb-text);
+    padding: 10px 16px;
+    border-radius: 4px;
+    margin: 8px 0;
+  }
+
+  .fsb-style-minimal .fsb-inner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .fsb-style-minimal .fsb-icon {
+    display: none;
+  }
+
+  .fsb-style-minimal .fsb-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .fsb-style-minimal .fsb-message {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .fsb-style-minimal .fsb-progress-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Floating Style */
+  .fsb-style-floating {
+    background-color: var(--fsb-bg);
+    color: var(--fsb-text);
+    padding: 12px 16px;
+    border-radius: 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: inline-block;
+    margin: 8px;
+  }
+
+  .fsb-style-floating .fsb-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .fsb-style-floating .fsb-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .fsb-style-floating .fsb-message {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .fsb-style-floating .fsb-progress-wrapper {
+    display: none;
+  }
+
+  /* Announcement Bar Style */
+  .fsb-style-announcement {
+    background-color: var(--fsb-bg);
+    color: var(--fsb-text);
+    padding: 12px 20px;
+    text-align: center;
+  }
+
+  .fsb-style-announcement .fsb-inner {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .fsb-style-announcement .fsb-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .fsb-style-announcement .fsb-message {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .fsb-style-announcement .fsb-progress-wrapper {
+    display: none;
+  }
+
+  /* Position Styles */
+  .fsb-pos-inline {
+    position: relative;
+  }
+
+  .fsb-pos-top-fixed {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .fsb-pos-bottom-fixed {
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Icon */
+  .fsb-icon {
+    flex-shrink: 0;
+  }
+
+  .fsb-icon svg {
+    display: block;
+  }
+
+  /* Progress Bar */
+  .fsb-progress-wrapper {
+    margin-top: 8px;
+  }
+
+  .fsb-progress-bar {
+    height: 8px;
+    background-color: var(--fsb-progress-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .fsb-progress-fill {
+    height: 100%;
+    background-color: var(--fsb-progress);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+  }
+
+  .fsb-progress-fill.animate {
+    background: linear-gradient(
+      90deg,
+      var(--fsb-progress) 0%,
+      color-mix(in srgb, var(--fsb-progress) 80%, white) 50%,
+      var(--fsb-progress) 100%
+    );
+    background-size: 200% 100%;
+    animation: fsb-shimmer 1.5s infinite;
+  }
+
+  @keyframes fsb-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .fsb-progress-text {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.7;
+    min-width: 35px;
+    text-align: right;
+  }
+
+  /* Success State */
+  .fsb-container.fsb-success {
+    background-color: var(--fsb-success-bg) !important;
+    color: var(--fsb-success-text) !important;
+  }
+
+  .fsb-container.fsb-success .fsb-progress-fill {
+    background-color: var(--fsb-success-text);
+  }
+
+  /* Confetti */
+  .fsb-confetti {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .fsb-confetti-piece {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    opacity: 0;
+    animation: fsb-confetti-fall 2s ease-out forwards;
+  }
+
+  @keyframes fsb-confetti-fall {
+    0% {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(100px) rotate(720deg);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .fsb-style-banner .fsb-inner {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .fsb-style-minimal .fsb-content {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .fsb-style-minimal .fsb-message {
+      white-space: normal;
+      text-align: center;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  function initFreeShippingBar() {
+    const blockId = '{{ block.id }}';
+    const container = document.getElementById('free-shipping-bar-' + blockId);
+
+    if (!container) {
+      console.warn('Free Shipping Bar container not found');
+      return;
+    }
+
+    const threshold = parseFloat(container.dataset.threshold) || 100;
+    const currency = container.dataset.currency || '$';
+    const progressMessage = container.dataset.progressMessage || 'Add {amount} more for FREE SHIPPING!';
+    const successMessage = container.dataset.successMessage || 'You have unlocked FREE SHIPPING!';
+    const emptyMessage = container.dataset.emptyMessage || 'Add {amount} to your cart for FREE SHIPPING!';
+    const animate = container.dataset.animate === 'true';
+    const celebrate = container.dataset.celebrate === 'true';
+
+    const messageEl = document.getElementById('fsb-message-' + blockId);
+    const progressEl = document.getElementById('fsb-progress-' + blockId);
+    const progressTextEl = document.getElementById('fsb-progress-text-' + blockId);
+    const confettiEl = document.getElementById('fsb-confetti-' + blockId);
+
+    let wasSuccess = false;
+    let initialized = false;
+
+    function formatAmount(amount) {
+      return currency + amount.toFixed(2);
+    }
+
+    function createConfetti() {
+      if (!celebrate || !confettiEl) return;
+
+      const colors = ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#5f27cd'];
+
+      for (let i = 0; i < 50; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'fsb-confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = Math.random() * 0.5 + 's';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        confettiEl.appendChild(piece);
+
+        setTimeout(() => piece.remove(), 2500);
+      }
+    }
+
+    function updateBar(cartTotal) {
+      const remaining = Math.max(0, threshold - cartTotal);
+      const progress = Math.min(100, (cartTotal / threshold) * 100);
+      const isSuccess = cartTotal >= threshold;
+
+      console.log('Free Shipping Bar Update:', { cartTotal, threshold, progress, remaining });
+
+      // Update progress bar with explicit style
+      if (progressEl) {
+        const widthValue = progress + '%';
+        progressEl.style.cssText = 'width: ' + widthValue + ' !important; transition: width 0.5s ease;';
+
+        if (animate && !isSuccess) {
+          progressEl.classList.add('animate');
+        } else {
+          progressEl.classList.remove('animate');
+        }
+      }
+
+      if (progressTextEl) {
+        progressTextEl.textContent = Math.round(progress) + '%';
+      }
+
+      // Update message
+      if (messageEl) {
+        if (isSuccess) {
+          messageEl.textContent = successMessage;
+          container.classList.add('fsb-success');
+
+          // Celebrate only once when success is first achieved
+          if (!wasSuccess && celebrate && initialized) {
+            createConfetti();
+          }
+          wasSuccess = true;
+        } else if (cartTotal === 0) {
+          messageEl.textContent = emptyMessage
+            .replace('{amount}', formatAmount(threshold))
+            .replace('{progress}', '0%');
+          container.classList.remove('fsb-success');
+          wasSuccess = false;
+        } else {
+          messageEl.textContent = progressMessage
+            .replace('{amount}', formatAmount(remaining))
+            .replace('{progress}', Math.round(progress) + '%');
+          container.classList.remove('fsb-success');
+          wasSuccess = false;
+        }
+      }
+
+      initialized = true;
+    }
+
+    // Get cart total from Shopify
+    function fetchCartTotal() {
+      fetch('/cart.js', {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json'
+        }
+      })
+        .then(function(response) {
+          if (!response.ok) throw new Error('Cart fetch failed');
+          return response.json();
+        })
+        .then(function(cart) {
+          const total = (cart.total_price || 0) / 100; // Convert from cents
+          updateBar(total);
+        })
+        .catch(function(error) {
+          console.error('Free Shipping Bar: Could not fetch cart', error);
+          // Still update with 0 on error
+          updateBar(0);
+        });
+    }
+
+    // Initial fetch with slight delay to ensure DOM is ready
+    setTimeout(fetchCartTotal, 100);
+
+    // Listen for cart updates
+    document.addEventListener('cart:updated', fetchCartTotal);
+
+    // Also check periodically for stores that don't fire cart events
+    setInterval(fetchCartTotal, 5000);
+
+    // Listen for AJAX cart changes by intercepting fetch
+    if (!window._fsbFetchIntercepted) {
+      window._fsbFetchIntercepted = true;
+      const originalFetch = window.fetch;
+      window.fetch = function() {
+        var args = arguments;
+        return originalFetch.apply(this, args).then(function(response) {
+          var url = args[0];
+          if (typeof url === 'string' && (url.includes('/cart/add') || url.includes('/cart/change') || url.includes('/cart/update') || url.includes('/cart/clear'))) {
+            setTimeout(fetchCartTotal, 500);
+          }
+          return response;
+        });
+      };
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFreeShippingBar);
+  } else {
+    initFreeShippingBar();
+  }
+})();
+</script>

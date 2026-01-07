@@ -1,0 +1,20 @@
+{
+  "name": "pos-tiered-pricing",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "shopify app build --path extensions/pos-tiered-pricing",
+    "dev": "shopify app dev --path extensions/pos-tiered-pricing"
+  },
+  "dependencies": {
+    "@shopify/ui-extensions": "^2024.10.0",
+    "@shopify/ui-extensions-react": "^2024.10.0",
+    "react": "^18.2.0",
+    "react-reconciler": "^0.29.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.7.0"
+  }
+}

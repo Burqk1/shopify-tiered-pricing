@@ -1,0 +1,74 @@
+{
+  "tier_table": {
+    "title": "Volume Discounts",
+    "quantity": "Quantity",
+    "discount": "Discount",
+    "price": "Price",
+    "you_save": "You Save",
+    "best_value": "Best Value",
+    "buy_more_save_more": "Buy More, Save More!",
+    "add_items": "Add {{ count }} more for {{ discount }} discount",
+    "units": "units",
+    "per_item": "per item",
+    "off": "off"
+  },
+  "countdown_timer": {
+    "sale_ends": "Sale ends in:",
+    "days": "Days",
+    "hours": "Hours",
+    "mins": "Mins",
+    "secs": "Secs",
+    "expired": "Sale has ended",
+    "hurry": "Hurry! Limited time offer"
+  },
+  "free_shipping": {
+    "progress": "Add {{ amount }} more for FREE SHIPPING!",
+    "success": "Congratulations! You've unlocked FREE SHIPPING!",
+    "empty": "Add {{ amount }} to your cart for FREE SHIPPING!",
+    "free": "FREE",
+    "shipping": "Shipping"
+  },
+  "cart_upsell": {
+    "title": "Complete Your Order",
+    "subtitle": "Add these items and save!",
+    "add_to_cart": "Add to Cart",
+    "added": "Added!",
+    "bundle_save": "BUNDLE & SAVE",
+    "frequently_bought": "Frequently Bought Together",
+    "you_may_like": "You May Also Like"
+  },
+  "general": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "spin_wheel": {
+    "badge": "Limited Time Offer",
+    "title": "Spin & Win!",
+    "subtitle": "Try your luck and win amazing discounts!",
+    "email_placeholder": "Enter your email",
+    "phone_placeholder": "Phone number (optional)",
+    "spin_button": "SPIN THE WHEEL",
+    "terms": "By spinning, you agree to receive marketing emails.",
+    "win_title": "Congratulations!",
+    "win_message": "Use this code at checkout to claim your prize!",
+    "coupon_label": "Your Discount Code",
+    "copy_button": "Copy Code",
+    "copied": "Copied!",
+    "shop_now": "Shop Now",
+    "trigger_text": "Spin & Win!"
+  },
+  "post_purchase": {
+    "headline": "Wait! Special Offer Just For You",
+    "subheadline": "Add this to your order now and save!",
+    "cta_button": "Add to Order - One Click",
+    "decline": "No thanks",
+    "timer_prefix": "Offer expires in:",
+    "secure": "Secure checkout",
+    "no_extra_payment": "No extra payment needed",
+    "ships_together": "Ships with your order",
+    "added": "Added to your order!"
+  }
+}
