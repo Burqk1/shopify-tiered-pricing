@@ -38,11 +38,11 @@ function createPrismaClient() {
 
   if (isNeon && DATABASE_URL) {
     // Use Neon serverless driver for better cold start performance
+    // Note: When using Driver Adapters, do NOT use datasourceUrl - it's incompatible
     const pool = new Pool({ connectionString: DATABASE_URL });
     const adapter = new PrismaNeon(pool);
     return new PrismaClient({
       adapter,
-      datasourceUrl: DATABASE_URL,
       log: process.env.NODE_ENV === "development"
         ? ["error", "warn"]
         : ["error"],
