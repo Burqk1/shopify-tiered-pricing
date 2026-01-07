@@ -19,8 +19,13 @@ declare global {
 neonConfig.webSocketConstructor = ws;
 
 function createPrismaClient() {
+  // Check multiple environment variable names (Vercel Neon integration uses POSTGRES_URL)
+  const databaseUrl = process.env.DATABASE_URL ||
+                      process.env.POSTGRES_PRISMA_URL ||
+                      process.env.POSTGRES_URL ||
+                      "";
+
   // Check if we're using Neon (pooler URL contains 'neon')
-  const databaseUrl = process.env.DATABASE_URL || "";
   const isNeon = databaseUrl.includes("neon");
 
   if (isNeon) {

@@ -1,3 +1,12 @@
+// Normalize DATABASE_URL from Vercel Neon integration
+// Vercel's Neon integration may use POSTGRES_URL instead of DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    "";
+}
+
 import { PassThrough } from "node:stream";
 
 import type { EntryContext } from "@remix-run/node";
