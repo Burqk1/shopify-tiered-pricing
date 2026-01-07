@@ -2,8 +2,8 @@
 
 name = "Tiered Pricing"
 client_id = "cf2600a5c8daa3bd218919c160f1d550"
-application_url = "https://shopify-tiered-pricing.vercel.app"
-embedded = true
+application_url = "https://shopify-tiered-pricing.vercel.app/app"
+embedded = false
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
