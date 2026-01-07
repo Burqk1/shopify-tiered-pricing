@@ -4,6 +4,16 @@
  * Initializes Shopify authentication and API access for the app.
  */
 
+// CRITICAL: Normalize DATABASE_URL before any imports that might use Prisma
+// This must be at the very top, before any other imports
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL_UNPOOLED ||
+    "";
+}
+
 import "@shopify/shopify-app-remix/adapters/node";
 import {
   ApiVersion,

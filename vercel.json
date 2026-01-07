@@ -4,5 +4,10 @@
       "path": "/api/cron/analytics-sync",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "build/server/index.js": {
+      "includeFiles": "instrumentation.ts"
+    }
+  }
 }
