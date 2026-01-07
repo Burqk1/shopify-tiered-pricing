@@ -307,3 +307,54 @@ export async function updatePOSSettings(
     },
   });
 }
+
+// ============================================================================
+// LOCALE SETTINGS
+// ============================================================================
+
+export interface LocaleSettings {
+  locale: string;
+}
+
+// Supported languages
+export const SUPPORTED_LOCALES = [
+  { code: "en", name: "English", flag: "🇺🇸" },
+  { code: "tr", name: "Türkçe", flag: "🇹🇷" },
+  { code: "de", name: "Deutsch", flag: "🇩🇪" },
+  { code: "fr", name: "Français", flag: "🇫🇷" },
+  { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "it", name: "Italiano", flag: "🇮🇹" },
+  { code: "pt", name: "Português", flag: "🇵🇹" },
+  { code: "nl", name: "Nederlands", flag: "🇳🇱" },
+  { code: "ja", name: "日本語", flag: "🇯🇵" },
+  { code: "zh", name: "中文", flag: "🇨🇳" },
+] as const;
+
+export type SupportedLocale = typeof SUPPORTED_LOCALES[number]["code"];
+
+/**
+ * Get locale setting for a shop
+ */
+export async function getLocaleSettings(shopDomain: string): Promise<LocaleSettings | null> {
+  const shop = await prisma.shop.findUnique({
+    where: { shopDomain },
+    select: {
+      locale: true,
+    },
+  });
+
+  return shop;
+}
+
+/**
+ * Update locale setting for a shop
+ */
+export async function updateLocaleSettings(
+  shopDomain: string,
+  locale: string
+): Promise<Shop> {
+  return prisma.shop.update({
+    where: { shopDomain },
+    data: { locale },
+  });
+}

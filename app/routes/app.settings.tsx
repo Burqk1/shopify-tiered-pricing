@@ -22,11 +22,20 @@ import {
   List,
   Checkbox,
   Modal,
+  Select,
 } from "@shopify/polaris";
 import { CheckIcon } from "@shopify/polaris-icons";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain, getPlanFeatures, getPOSSettings, updatePOSSettings } from "~/models/shop.server";
+import {
+  getShopByDomain,
+  getPlanFeatures,
+  getPOSSettings,
+  updatePOSSettings,
+  getLocaleSettings,
+  updateLocaleSettings,
+  SUPPORTED_LOCALES,
+} from "~/models/shop.server";
 import {
   PLANS,
   createSubscription,
@@ -45,10 +54,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw new Response("Shop not found", { status: 404 });
   }
 
-  const [subscriptionStatus, syncStats, posSettings] = await Promise.all([
+  const [subscriptionStatus, syncStats, posSettings, localeSettings] = await Promise.all([
     getSubscriptionStatus(admin, session.shop),
     getSyncStats(shop.id),
     getPOSSettings(session.shop),
+    getLocaleSettings(session.shop),
   ]);
 
   const planFeatures = getPlanFeatures(shop.plan);
@@ -69,6 +79,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       posShowTierInfo: true,
       posStaffOverride: false,
     },
+    localeSettings: localeSettings || { locale: "en" },
+    supportedLocales: SUPPORTED_LOCALES,
   });
 };
 
@@ -115,13 +127,25 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return json({ success: true, message: "POS settings updated" });
     }
 
+    case "updateLocale": {
+      const locale = formData.get("locale") as string;
+
+      if (!locale) {
+        return json({ error: "Locale is required" }, { status: 400 });
+      }
+
+      await updateLocaleSettings(session.shop, locale);
+
+      return json({ success: true, message: "Language updated successfully" });
+    }
+
     default:
       return json({ error: "Unknown action" }, { status: 400 });
   }
 };
 
 export default function Settings() {
-  const { shop, subscription, planFeatures, syncStats, plans, posSettings } =
+  const { shop, subscription, planFeatures, syncStats, plans, posSettings, localeSettings, supportedLocales } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
@@ -155,6 +179,24 @@ export default function Settings() {
       { method: "POST" }
     );
   }, [submit, posEnabled, posShowTierInfo, posStaffOverride]);
+
+  // Language Settings state
+  const [selectedLocale, setSelectedLocale] = useState(localeSettings.locale);
+
+  const handleLocaleSave = useCallback(() => {
+    submit(
+      {
+        action: "updateLocale",
+        locale: selectedLocale,
+      },
+      { method: "POST" }
+    );
+  }, [submit, selectedLocale]);
+
+  const localeOptions = supportedLocales.map((locale: { code: string; name: string; flag: string }) => ({
+    label: `${locale.flag} ${locale.name}`,
+    value: locale.code,
+  }));
 
   // Redirect to Shopify billing page if we got a confirmation URL
   if (actionData && "confirmationUrl" in actionData) {
@@ -440,6 +482,34 @@ export default function Settings() {
 
                 <Button onClick={handlePOSSave}>
                   Save POS Settings
+                </Button>
+              </BlockStack>
+            </Card>
+          </Layout.Section>
+        </Layout>
+
+        {/* Language Settings */}
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <BlockStack gap="400">
+                <Text variant="headingMd" as="h2">
+                  Language
+                </Text>
+
+                <Text variant="bodyMd" tone="subdued" as="p">
+                  Choose your preferred language for the app interface.
+                </Text>
+
+                <Select
+                  label="App Language"
+                  options={localeOptions}
+                  value={selectedLocale}
+                  onChange={setSelectedLocale}
+                />
+
+                <Button onClick={handleLocaleSave}>
+                  Save Language
                 </Button>
               </BlockStack>
             </Card>

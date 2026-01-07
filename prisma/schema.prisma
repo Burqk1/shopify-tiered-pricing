@@ -54,6 +54,7 @@ model Shop {
   // Shop Settings
   currency         String    @default("USD")  // Shop currency code (ISO 4217)
   currencySymbol   String    @default("$")    // Currency symbol for display
+  locale           String    @default("en")   // UI language: en, tr, de, fr, es, etc.
 
   // POS Settings
   posEnabled       Boolean   @default(true)   // Enable/disable POS integration
