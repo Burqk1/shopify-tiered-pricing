@@ -4,7 +4,9 @@
       "Bash(cat:*)",
       "Bash(npm test:*)",
       "Bash(npx shopify app deploy:*)",
-      "Bash(npx shopify app config link --reset)"
+      "Bash(npx shopify app config link --reset)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)"
     ]
   }
 }
