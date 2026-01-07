@@ -11,13 +11,20 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import ws from "ws";
 
 // Get database URL from multiple possible environment variable names
-// Vercel's Neon integration uses POSTGRES_URL or POSTGRES_PRISMA_URL
+// Vercel's Neon integration uses various naming conventions
 export const DATABASE_URL =
   process.env.DATABASE_URL ||
+  process.env.DATABASE_POSTGRES_PRISMA_URL ||
+  process.env.DATABASE_POSTGRES_URL ||
   process.env.POSTGRES_PRISMA_URL ||
   process.env.POSTGRES_URL ||
   process.env.DATABASE_URL_UNPOOLED ||
   "";
+
+// Debug log for troubleshooting (will appear in Vercel logs)
+if (typeof process !== "undefined") {
+  console.log("[db.server] DATABASE_URL resolved:", DATABASE_URL ? "SET (length: " + DATABASE_URL.length + ")" : "NOT SET");
+}
 
 // CRITICAL: Set DATABASE_URL for libraries that read it directly (like @shopify/shopify-app-session-storage-prisma)
 if (!process.env.DATABASE_URL && DATABASE_URL) {
