@@ -6,9 +6,6 @@
  */
 
 import { PrismaClient } from "@prisma/client";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import { PrismaNeon } from "@prisma/adapter-neon";
-import ws from "ws";
 
 // Get database URL from multiple possible environment variable names
 // Vercel's Neon integration uses various naming conventions
@@ -36,29 +33,12 @@ declare global {
   var __prismaClient: PrismaClient | undefined;
 }
 
-// Configure Neon for serverless environments
-neonConfig.webSocketConstructor = ws;
-
 function createPrismaClient() {
-  // Check if we're using Neon (pooler URL contains 'neon')
-  const isNeon = DATABASE_URL.includes("neon");
+  // Use standard Prisma client - Neon adapter is incompatible with PrismaSessionStorage
+  // The DATABASE_URL is already set in process.env, Prisma will use it automatically
+  console.log("[db.server] Creating PrismaClient with DATABASE_URL from env");
 
-  if (isNeon && DATABASE_URL) {
-    // Use Neon serverless driver for better cold start performance
-    // Note: When using Driver Adapters, do NOT use datasourceUrl - it's incompatible
-    const pool = new Pool({ connectionString: DATABASE_URL });
-    const adapter = new PrismaNeon(pool);
-    return new PrismaClient({
-      adapter,
-      log: process.env.NODE_ENV === "development"
-        ? ["error", "warn"]
-        : ["error"],
-    });
-  }
-
-  // Fallback to standard Prisma client with explicit datasource URL
   return new PrismaClient({
-    datasourceUrl: DATABASE_URL || undefined,
     log: process.env.NODE_ENV === "development"
       ? ["query", "error", "warn"]
       : ["error"],
