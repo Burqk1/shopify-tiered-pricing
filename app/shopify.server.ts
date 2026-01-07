@@ -4,15 +4,8 @@
  * Initializes Shopify authentication and API access for the app.
  */
 
-// CRITICAL: Normalize DATABASE_URL before any imports that might use Prisma
-// This must be at the very top, before any other imports
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    process.env.POSTGRES_PRISMA_URL ||
-    process.env.POSTGRES_URL ||
-    process.env.DATABASE_URL_UNPOOLED ||
-    "";
-}
+// CRITICAL: Import db.server FIRST to ensure DATABASE_URL is set before PrismaSessionStorage initializes
+import prisma from "./db.server";
 
 import "@shopify/shopify-app-remix/adapters/node";
 import {
@@ -21,7 +14,6 @@ import {
   shopifyApp,
 } from "@shopify/shopify-app-remix/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
-import prisma from "./db.server";
 
 // Development'ta Shopify CLI tunnel URL'sini otomatik kullanır
 const appUrl = process.env.SHOPIFY_APP_URL || process.env.HOST || "https://localhost";

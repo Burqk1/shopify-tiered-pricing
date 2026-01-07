@@ -10,6 +10,20 @@ import { Pool, neonConfig } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 import ws from "ws";
 
+// Get database URL from multiple possible environment variable names
+// Vercel's Neon integration uses POSTGRES_URL or POSTGRES_PRISMA_URL
+export const DATABASE_URL =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL_UNPOOLED ||
+  "";
+
+// CRITICAL: Set DATABASE_URL for libraries that read it directly (like @shopify/shopify-app-session-storage-prisma)
+if (!process.env.DATABASE_URL && DATABASE_URL) {
+  process.env.DATABASE_URL = DATABASE_URL;
+}
+
 declare global {
   // eslint-disable-next-line no-var
   var __prismaClient: PrismaClient | undefined;
@@ -19,29 +33,25 @@ declare global {
 neonConfig.webSocketConstructor = ws;
 
 function createPrismaClient() {
-  // Check multiple environment variable names (Vercel Neon integration uses POSTGRES_URL)
-  const databaseUrl = process.env.DATABASE_URL ||
-                      process.env.POSTGRES_PRISMA_URL ||
-                      process.env.POSTGRES_URL ||
-                      "";
-
   // Check if we're using Neon (pooler URL contains 'neon')
-  const isNeon = databaseUrl.includes("neon");
+  const isNeon = DATABASE_URL.includes("neon");
 
-  if (isNeon) {
+  if (isNeon && DATABASE_URL) {
     // Use Neon serverless driver for better cold start performance
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool({ connectionString: DATABASE_URL });
     const adapter = new PrismaNeon(pool);
     return new PrismaClient({
       adapter,
+      datasourceUrl: DATABASE_URL,
       log: process.env.NODE_ENV === "development"
         ? ["error", "warn"]
         : ["error"],
     });
   }
 
-  // Fallback to standard Prisma client
+  // Fallback to standard Prisma client with explicit datasource URL
   return new PrismaClient({
+    datasourceUrl: DATABASE_URL || undefined,
     log: process.env.NODE_ENV === "development"
       ? ["query", "error", "warn"]
       : ["error"],
