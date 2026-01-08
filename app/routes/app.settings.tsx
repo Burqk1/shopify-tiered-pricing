@@ -39,6 +39,7 @@ import {
   createSubscription,
   getSubscriptionStatus,
   cancelSubscription,
+  hasFeatureAccess,
 } from "~/services/billing.server";
 import { getSyncStats } from "~/models/sync-log.server";
 import { getTranslations } from "~/i18n";
@@ -64,6 +65,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const locale = localeSettings?.locale || "en";
   const t = getTranslations(locale);
 
+  // Check feature access based on plan
+  const featureAccess = {
+    posIntegration: hasFeatureAccess(shop.plan, "posIntegration"),
+    cssEditor: hasFeatureAccess(shop.plan, "cssEditor"),
+    customerTags: hasFeatureAccess(shop.plan, "customerTags"),
+    multiLanguage: hasFeatureAccess(shop.plan, "multiLanguage"),
+    aiPricing: hasFeatureAccess(shop.plan, "aiPricing"),
+    multiCurrency: hasFeatureAccess(shop.plan, "multiCurrency"),
+    apiAccess: hasFeatureAccess(shop.plan, "apiAccess"),
+  };
+
   return json({
     shop: {
       domain: session.shop,
@@ -82,6 +94,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     },
     localeSettings: localeSettings || { locale: "en" },
     supportedLocales: SUPPORTED_LOCALES,
+    featureAccess,
     t,
   });
 };
@@ -147,7 +160,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { shop, planFeatures, syncStats, plans, posSettings, localeSettings, supportedLocales, t } =
+  const { shop, planFeatures, syncStats, plans, posSettings, localeSettings, supportedLocales, featureAccess, t } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();

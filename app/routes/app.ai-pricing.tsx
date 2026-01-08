@@ -49,8 +49,9 @@ import {
 import { useState, useCallback } from "react";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getPricingInsights, getPricingInsightStats, updateInsightStatus, bulkApplyInsights, bulkDismissInsights } from "~/models/pricing-insight.server";
+import { getTranslations } from "~/i18n";
 import { getMLModelConfig, upsertMLModelConfig } from "~/services/ml-pricing.server";
 import { getAutoApplyRules, getAutoApplyStats, createAutoApplyRule, updateAutoApplyRule } from "~/services/auto-apply.server";
 import { createABTestFromInsight, getInsightABTestResults } from "~/models/ab-test.server";
@@ -64,13 +65,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw new Response("Shop not found", { status: 404 });
   }
 
-  const [insights, stats, mlConfig, autoApplyRules, autoApplyStats] = await Promise.all([
+  const [insights, stats, mlConfig, autoApplyRules, autoApplyStats, localeSettings] = await Promise.all([
     getPricingInsights(shop.id),
     getPricingInsightStats(shop.id),
     getMLModelConfig(shop.id),
     getAutoApplyRules(shop.id),
     getAutoApplyStats(shop.id),
+    getLocaleSettings(session.shop),
   ]);
+
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
 
   // Enrich insights with product data from Shopify
   const productIds = insights.map((i) => i.productId).filter(Boolean);
@@ -158,6 +163,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       maxPriceChange: mlConfig ? Number(mlConfig.maxPriceIncrease) : 20,
       minMargin: mlConfig ? Number(mlConfig.minMarginPercent) : 10,
     },
+    t,
   });
 };
 
@@ -245,7 +251,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function AIPricingDashboard() {
-  const { insights, stats, settings, autoApplyRules, mlConfig } = useLoaderData<typeof loader>();
+  const { insights, stats, settings, autoApplyRules, mlConfig, t } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
   const isLoading = navigation.state !== "idle";
@@ -325,31 +331,31 @@ export default function AIPricingDashboard() {
   };
 
   const getConfidenceBadge = (score: number) => {
-    if (score >= 0.85) return <Badge tone="success">High Confidence</Badge>;
-    if (score >= 0.7) return <Badge tone="attention">Medium Confidence</Badge>;
-    return <Badge tone="warning">Low Confidence</Badge>;
+    if (score >= 0.85) return <Badge tone="success">{t.aiPricingPage.highConfidence}</Badge>;
+    if (score >= 0.7) return <Badge tone="attention">{t.aiPricingPage.mediumConfidence}</Badge>;
+    return <Badge tone="warning">{t.aiPricingPage.lowConfidence}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "NEW":
-        return <Badge tone="info">New</Badge>;
+        return <Badge tone="info">{t.aiPricingPage.new}</Badge>;
       case "VIEWED":
-        return <Badge>Viewed</Badge>;
+        return <Badge>{t.aiPricingPage.viewed}</Badge>;
       case "APPLIED":
-        return <Badge tone="success">Applied</Badge>;
+        return <Badge tone="success">{t.aiPricingPage.applied}</Badge>;
       case "DISMISSED":
-        return <Badge tone="critical">Dismissed</Badge>;
+        return <Badge tone="critical">{t.aiPricingPage.dismissed}</Badge>;
       default:
         return <Badge>{status}</Badge>;
     }
   };
 
   const tabs = [
-    { id: "all", content: "All Insights", badge: insights.length.toString() },
-    { id: "increase", content: "Price Increases", badge: insights.filter(i => i.direction === "increase").length.toString() },
-    { id: "decrease", content: "Price Decreases", badge: insights.filter(i => i.direction === "decrease").length.toString() },
-    { id: "applied", content: "Applied", badge: "12" },
+    { id: "all", content: t.aiPricingPage.allInsights, badge: insights.length.toString() },
+    { id: "increase", content: t.aiPricingPage.priceIncreases, badge: insights.filter(i => i.direction === "increase").length.toString() },
+    { id: "decrease", content: t.aiPricingPage.priceDecreases, badge: insights.filter(i => i.direction === "decrease").length.toString() },
+    { id: "applied", content: t.aiPricingPage.applied, badge: "12" },
   ];
 
   const filteredInsights = insights.filter(insight => {
@@ -362,16 +368,16 @@ export default function AIPricingDashboard() {
 
   return (
     <Page
-      title="AI Pricing Optimizer"
-      subtitle="Smart pricing recommendations powered by machine learning"
+      title={t.aiPricingPage.title}
+      subtitle={t.aiPricingPage.subtitle}
       primaryAction={{
-        content: "Refresh Insights",
+        content: t.aiPricingPage.refreshInsights,
         icon: RefreshIcon,
         onAction: () => {},
       }}
       secondaryActions={[
         {
-          content: "Settings",
+          content: t.aiPricingPage.settings,
           onAction: () => setShowSettingsModal(true),
         },
       ]}
@@ -383,11 +389,11 @@ export default function AIPricingDashboard() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodySm" as="span" tone="subdued">Pending Review</Text>
+                  <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.pendingReview}</Text>
                   <Icon source={AutomationIcon} tone="info" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3">{stats.pendingReview}</Text>
-                <Text variant="bodySm" as="p" tone="subdued">New suggestions</Text>
+                <Text variant="bodySm" as="p" tone="subdued">{t.aiPricingPage.newSuggestions}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -396,11 +402,11 @@ export default function AIPricingDashboard() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodySm" as="span" tone="subdued">Applied</Text>
+                  <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.applied}</Text>
                   <Icon source={CheckIcon} tone="success" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3">{stats.applied}</Text>
-                <Text variant="bodySm" as="p" tone="subdued">Recommendations used</Text>
+                <Text variant="bodySm" as="p" tone="subdued">{t.aiPricingPage.recommendationsUsed}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -409,13 +415,13 @@ export default function AIPricingDashboard() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodySm" as="span" tone="subdued">Revenue Lift</Text>
+                  <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.revenueLift}</Text>
                   <Icon source={ChartVerticalIcon} tone="success" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3" tone="success">
                   +{formatCurrency(stats.totalRevenueLift)}
                 </Text>
-                <Text variant="bodySm" as="p" tone="subdued">From applied suggestions</Text>
+                <Text variant="bodySm" as="p" tone="subdued">{t.aiPricingPage.fromApplied}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -424,7 +430,7 @@ export default function AIPricingDashboard() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodySm" as="span" tone="subdued">Avg. Confidence</Text>
+                  <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.avgConfidence}</Text>
                   <Icon source={AutomationIcon} tone="base" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3">{stats.avgConfidence}%</Text>
@@ -435,15 +441,15 @@ export default function AIPricingDashboard() {
         </Layout>
 
         {/* How it works */}
-        <Banner title="How AI Pricing Works" tone="info">
+        <Banner title={t.aiPricingPage.howItWorks} tone="info">
           <BlockStack gap="200">
-            <Text as="p">Our AI analyzes multiple signals to suggest optimal prices:</Text>
+            <Text as="p">{t.aiPricingPage.howItWorksDesc}</Text>
             <InlineStack gap="400">
-              <Text variant="bodySm" as="span">📊 Demand patterns</Text>
-              <Text variant="bodySm" as="span">📦 Inventory levels</Text>
-              <Text variant="bodySm" as="span">💰 Competitor pricing</Text>
-              <Text variant="bodySm" as="span">📈 Conversion rates</Text>
-              <Text variant="bodySm" as="span">🕐 Time-based trends</Text>
+              <Text variant="bodySm" as="span">📊 {t.aiPricingPage.demandPatterns}</Text>
+              <Text variant="bodySm" as="span">📦 {t.aiPricingPage.inventoryLevels}</Text>
+              <Text variant="bodySm" as="span">💰 {t.aiPricingPage.competitorPricing}</Text>
+              <Text variant="bodySm" as="span">📈 {t.aiPricingPage.conversionRates}</Text>
+              <Text variant="bodySm" as="span">🕐 {t.aiPricingPage.timeBasedTrends}</Text>
             </InlineStack>
           </BlockStack>
         </Banner>
@@ -454,20 +460,20 @@ export default function AIPricingDashboard() {
             <Box padding="400">
               {filteredInsights.length === 0 ? (
                 <EmptyState
-                  heading="No insights available"
+                  heading={t.aiPricingPage.noInsights}
                   image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                 >
-                  <p>Check back later for new pricing recommendations.</p>
+                  <p>{t.aiPricingPage.checkBackLater}</p>
                 </EmptyState>
               ) : (
                 <BlockStack gap="400">
                   {selectedResources.length > 0 && (
                     <InlineStack gap="200">
                       <Button onClick={handleBulkApply} loading={isLoading}>
-                        {`Apply Selected (${selectedResources.length})`}
+                        {`${t.aiPricingPage.applySelected} (${selectedResources.length})`}
                       </Button>
                       <Button onClick={handleBulkDismiss} loading={isLoading}>
-                        Dismiss Selected
+                        {t.aiPricingPage.dismissSelected}
                       </Button>
                     </InlineStack>
                   )}
@@ -543,13 +549,13 @@ export default function AIPricingDashboard() {
                               loading={isLoading}
                               disabled={insight.status === "APPLIED" || insight.status === "DISMISSED"}
                             >
-                              Apply
+                              {t.aiPricingPage.apply}
                             </Button>
                             <Button
                               onClick={() => handleCreateABTest(insight.id)}
                               disabled={insight.status === "APPLIED" || insight.status === "DISMISSED"}
                             >
-                              A/B Test
+                              {t.aiPricingPage.abTest}
                             </Button>
                             <Button
                               onClick={() => handleDismissInsight(insight.id)}
@@ -557,7 +563,7 @@ export default function AIPricingDashboard() {
                               loading={isLoading}
                               disabled={insight.status === "APPLIED" || insight.status === "DISMISSED"}
                             >
-                              Dismiss
+                              {t.aiPricingPage.dismiss}
                             </Button>
                           </InlineStack>
                         </InlineStack>
@@ -567,7 +573,7 @@ export default function AIPricingDashboard() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '16px' }}>
                           <BlockStack gap="100">
-                            <Text variant="bodySm" as="span" tone="subdued">Demand Score</Text>
+                            <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.demandScore}</Text>
                             <InlineStack gap="100" blockAlign="center">
                               <Text variant="headingSm" as="p">{insight.factors.demandScore}</Text>
                               <ProgressBar
@@ -579,31 +585,31 @@ export default function AIPricingDashboard() {
                           </BlockStack>
 
                           <BlockStack gap="100">
-                            <Text variant="bodySm" as="span" tone="subdued">Inventory</Text>
-                            <Text variant="headingSm" as="p">{insight.factors.inventoryLevel} units</Text>
+                            <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.inventory}</Text>
+                            <Text variant="headingSm" as="p">{insight.factors.inventoryLevel} {t.aiPricingPage.units}</Text>
                           </BlockStack>
 
                           <BlockStack gap="100">
-                            <Text variant="bodySm" as="span" tone="subdued">Competitor Avg</Text>
+                            <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.competitorAvg}</Text>
                             <Text variant="headingSm" as="p">
                               {formatCurrency(insight.factors.competitorAvg)}
                             </Text>
                           </BlockStack>
 
                           <BlockStack gap="100">
-                            <Text variant="bodySm" as="span" tone="subdued">Views (7d)</Text>
+                            <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.views7d}</Text>
                             <Text variant="headingSm" as="p">
                               {insight.factors.viewsLast7Days.toLocaleString()}
                             </Text>
                           </BlockStack>
 
                           <BlockStack gap="100">
-                            <Text variant="bodySm" as="span" tone="subdued">Sales (7d)</Text>
+                            <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.sales7d}</Text>
                             <Text variant="headingSm" as="p">{insight.factors.salesLast7Days}</Text>
                           </BlockStack>
 
                           <BlockStack gap="100">
-                            <Text variant="bodySm" as="span" tone="subdued">Conv. Rate</Text>
+                            <Text variant="bodySm" as="span" tone="subdued">{t.aiPricingPage.convRate}</Text>
                             <Text variant="headingSm" as="p" tone="success">
                               {insight.factors.conversionRate}%
                             </Text>
@@ -614,7 +620,7 @@ export default function AIPricingDashboard() {
                         <Box padding="300" background="bg-surface-success" borderRadius="100">
                           <InlineStack align="space-between">
                             <Text variant="bodySm" as="span">
-                              💰 Potential monthly revenue lift:
+                              💰 {t.aiPricingPage.potentialRevenueLift}:
                             </Text>
                             <Text variant="bodySm" as="span" fontWeight="semibold" tone="success">
                               +{formatCurrency(insight.potentialRevenueLift)}
@@ -634,29 +640,29 @@ export default function AIPricingDashboard() {
         <Modal
           open={showSettingsModal}
           onClose={() => setShowSettingsModal(false)}
-          title="AI Pricing Settings"
+          title={t.aiPricingPage.settingsTitle}
           primaryAction={{
-            content: "Save Settings",
+            content: t.aiPricingPage.saveSettings,
             onAction: handleSaveSettings,
             loading: isLoading,
           }}
           secondaryActions={[
             {
-              content: "Cancel",
+              content: t.common.cancel,
               onAction: () => setShowSettingsModal(false),
             },
           ]}
         >
           <Modal.Section>
             <BlockStack gap="500">
-              <Text variant="headingMd" as="h3">Display Settings</Text>
+              <Text variant="headingMd" as="h3">{t.aiPricingPage.displaySettings}</Text>
 
               <TextField
-                label="Minimum Confidence Score (%)"
+                label={t.aiPricingPage.minConfidenceScore}
                 type="number"
                 value={aiSettings.minConfidence.toString()}
                 onChange={(value) => setAiSettings({ ...aiSettings, minConfidence: parseInt(value) || 0 })}
-                helpText="Only show suggestions above this confidence level (0-100)"
+                helpText={t.aiPricingPage.minConfidenceHelp}
                 autoComplete="off"
                 min={0}
                 max={100}
@@ -664,25 +670,25 @@ export default function AIPricingDashboard() {
 
               <Divider />
 
-              <Text variant="headingMd" as="h3">Price Constraints</Text>
+              <Text variant="headingMd" as="h3">{t.aiPricingPage.priceConstraints}</Text>
 
               <TextField
-                label="Maximum Price Change (%)"
+                label={t.aiPricingPage.maxPriceChange}
                 type="number"
                 value={aiSettings.maxPriceChange.toString()}
                 onChange={(value) => setAiSettings({ ...aiSettings, maxPriceChange: parseInt(value) || 0 })}
-                helpText="Limit how much AI can suggest changing prices (both increase and decrease)"
+                helpText={t.aiPricingPage.maxPriceChangeHelp}
                 autoComplete="off"
                 min={1}
                 max={50}
               />
 
               <TextField
-                label="Minimum Profit Margin (%)"
+                label={t.aiPricingPage.minProfitMargin}
                 type="number"
                 value={aiSettings.minMargin.toString()}
                 onChange={(value) => setAiSettings({ ...aiSettings, minMargin: parseInt(value) || 0 })}
-                helpText="AI will never suggest prices below this margin (requires cost price data)"
+                helpText={t.aiPricingPage.minProfitMarginHelp}
                 autoComplete="off"
                 min={0}
                 max={90}
@@ -690,19 +696,19 @@ export default function AIPricingDashboard() {
 
               <Divider />
 
-              <Text variant="headingMd" as="h3">Auto-Apply</Text>
+              <Text variant="headingMd" as="h3">{t.aiPricingPage.autoApply}</Text>
 
               <Banner tone={aiSettings.autoApplyEnabled ? "success" : "info"}>
                 <BlockStack gap="200">
                   <InlineStack align="space-between" blockAlign="center">
                     <BlockStack gap="100">
                       <Text variant="bodyMd" as="p" fontWeight="semibold">
-                        {aiSettings.autoApplyEnabled ? "Auto-Apply is Enabled" : "Auto-Apply is Disabled"}
+                        {aiSettings.autoApplyEnabled ? t.aiPricingPage.autoApplyEnabled : t.aiPricingPage.autoApplyDisabled}
                       </Text>
                       <Text variant="bodySm" as="p" tone="subdued">
                         {aiSettings.autoApplyEnabled
-                          ? `Automatically applying high-confidence suggestions (≥85%)`
-                          : "Enable to automatically apply high-confidence price changes"
+                          ? `${t.aiPricingPage.autoApplyEnabledDesc} (≥85%)`
+                          : t.aiPricingPage.autoApplyDisabledDesc
                         }
                       </Text>
                     </BlockStack>
@@ -712,25 +718,25 @@ export default function AIPricingDashboard() {
                         handleToggleAutoApply(!aiSettings.autoApplyEnabled);
                       }}
                     >
-                      {aiSettings.autoApplyEnabled ? "Disable" : "Enable"}
+                      {aiSettings.autoApplyEnabled ? t.aiPricingPage.disable : t.aiPricingPage.enable}
                     </Button>
                   </InlineStack>
 
                   {aiSettings.autoApplyEnabled && (
                     <Box paddingBlockStart="200">
                       <BlockStack gap="100">
-                        <Text variant="bodySm" as="p">Auto-apply rules:</Text>
+                        <Text variant="bodySm" as="p">{t.aiPricingPage.autoApplyRules}</Text>
                         <Text variant="bodySm" as="p" tone="subdued">
-                          • Confidence ≥ 85%
+                          • {t.aiPricingPage.confidenceRule} ≥ 85%
                         </Text>
                         <Text variant="bodySm" as="p" tone="subdued">
-                          • Price change ≤ 15%
+                          • {t.aiPricingPage.priceChangeRule} ≤ 15%
                         </Text>
                         <Text variant="bodySm" as="p" tone="subdued">
-                          • Maintains minimum profit margin
+                          • {t.aiPricingPage.marginRule}
                         </Text>
                         <Text variant="bodySm" as="p" tone="subdued">
-                          • Max 10 auto-applies per day
+                          • {t.aiPricingPage.dailyLimitRule}
                         </Text>
                       </BlockStack>
                     </Box>
@@ -741,11 +747,11 @@ export default function AIPricingDashboard() {
               {stats.autoAppliedLast30Days > 0 && (
                 <Box padding="300" background="bg-surface-secondary" borderRadius="200">
                   <InlineStack align="space-between">
-                    <Text variant="bodySm" as="span">Auto-applied today:</Text>
+                    <Text variant="bodySm" as="span">{t.aiPricingPage.autoAppliedToday}</Text>
                     <Text variant="bodySm" as="span" fontWeight="semibold">{stats.autoAppliedToday}</Text>
                   </InlineStack>
                   <InlineStack align="space-between">
-                    <Text variant="bodySm" as="span">Auto-applied (30 days):</Text>
+                    <Text variant="bodySm" as="span">{t.aiPricingPage.autoApplied30Days}</Text>
                     <Text variant="bodySm" as="span" fontWeight="semibold">{stats.autoAppliedLast30Days}</Text>
                   </InlineStack>
                 </Box>
@@ -753,36 +759,36 @@ export default function AIPricingDashboard() {
 
               <Divider />
 
-              <Text variant="headingMd" as="h3">ML Model Weights</Text>
+              <Text variant="headingMd" as="h3">{t.aiPricingPage.mlModelWeights}</Text>
               <Text variant="bodySm" as="p" tone="subdued">
-                Adjust how much weight each factor has in pricing decisions. Values should sum to 1.0.
+                {t.aiPricingPage.mlModelWeightsDesc}
               </Text>
 
               {mlConfig && (
                 <Box padding="300" background="bg-surface-secondary" borderRadius="200">
                   <BlockStack gap="200">
                     <InlineStack align="space-between">
-                      <Text variant="bodySm" as="span">Demand Score</Text>
+                      <Text variant="bodySm" as="span">{t.aiPricingPage.demandScore}</Text>
                       <Text variant="bodySm" as="span">{(mlConfig.weightDemand * 100).toFixed(0)}%</Text>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text variant="bodySm" as="span">Inventory Level</Text>
+                      <Text variant="bodySm" as="span">{t.aiPricingPage.inventory}</Text>
                       <Text variant="bodySm" as="span">{(mlConfig.weightInventory * 100).toFixed(0)}%</Text>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text variant="bodySm" as="span">Competitor Position</Text>
+                      <Text variant="bodySm" as="span">{t.aiPricingPage.competitorPricing}</Text>
                       <Text variant="bodySm" as="span">{(mlConfig.weightCompetitor * 100).toFixed(0)}%</Text>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text variant="bodySm" as="span">Conversion Rate</Text>
+                      <Text variant="bodySm" as="span">{t.aiPricingPage.convRate}</Text>
                       <Text variant="bodySm" as="span">{(mlConfig.weightConversion * 100).toFixed(0)}%</Text>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text variant="bodySm" as="span">Profit Margin</Text>
+                      <Text variant="bodySm" as="span">{t.aiPricingPage.profitMargin}</Text>
                       <Text variant="bodySm" as="span">{(mlConfig.weightMargin * 100).toFixed(0)}%</Text>
                     </InlineStack>
                     <InlineStack align="space-between">
-                      <Text variant="bodySm" as="span">Seasonality</Text>
+                      <Text variant="bodySm" as="span">{t.aiPricingPage.seasonality}</Text>
                       <Text variant="bodySm" as="span">{(mlConfig.weightSeasonality * 100).toFixed(0)}%</Text>
                     </InlineStack>
                   </BlockStack>
@@ -791,7 +797,7 @@ export default function AIPricingDashboard() {
 
               {!mlConfig && (
                 <Text variant="bodySm" as="p" tone="subdued">
-                  Using default weights. Weights will be customizable after first insight generation.
+                  {t.aiPricingPage.usingDefaultWeights}
                 </Text>
               )}
             </BlockStack>

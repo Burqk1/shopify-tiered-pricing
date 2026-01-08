@@ -293,20 +293,98 @@ export async function handleSubscriptionApproval(
 }
 
 /**
- * Check if shop has access to a feature
+ * Feature access by plan:
+ *
+ * FREE:
+ *   - 1 pricing rule
+ *   - Basic table design
+ *
+ * GROWTH ($39.99/mo):
+ *   - Unlimited rules
+ *   - B2B Customer Tags
+ *   - CSS Customization
+ *   - POS Integration
+ *   - 10 Languages
+ *
+ * PROFESSIONAL ($89.99/mo):
+ *   - Everything in Growth
+ *   - AI-Powered Pricing
+ *   - Multi-Currency
+ *   - Priority Support
+ *   - API Access
  */
-export function hasFeatureAccess(
-  plan: Plan,
-  feature: "customerTags" | "cssEditor" | "multiCurrency" | "prioritySupport"
-): boolean {
-  switch (feature) {
-    case "customerTags":
-    case "cssEditor":
-      return plan !== "FREE";
-    case "multiCurrency":
-    case "prioritySupport":
-      return plan === "PROFESSIONAL";
+export type Feature =
+  | "unlimitedRules"
+  | "customerTags"
+  | "cssEditor"
+  | "posIntegration"
+  | "multiLanguage"
+  | "aiPricing"
+  | "multiCurrency"
+  | "prioritySupport"
+  | "apiAccess";
+
+export function hasFeatureAccess(plan: Plan, feature: Feature): boolean {
+  // FREE plan features
+  const freeFeatures: Feature[] = [];
+
+  // GROWTH plan features (includes FREE)
+  const growthFeatures: Feature[] = [
+    ...freeFeatures,
+    "unlimitedRules",
+    "customerTags",
+    "cssEditor",
+    "posIntegration",
+    "multiLanguage",
+  ];
+
+  // PROFESSIONAL plan features (includes GROWTH)
+  const professionalFeatures: Feature[] = [
+    ...growthFeatures,
+    "aiPricing",
+    "multiCurrency",
+    "prioritySupport",
+    "apiAccess",
+  ];
+
+  switch (plan) {
+    case "PROFESSIONAL":
+      return professionalFeatures.includes(feature);
+    case "GROWTH":
+      return growthFeatures.includes(feature);
+    case "FREE":
     default:
-      return false;
+      return freeFeatures.includes(feature);
+  }
+}
+
+/**
+ * Get all features available for a plan
+ */
+export function getPlanFeatureList(plan: Plan): Feature[] {
+  switch (plan) {
+    case "PROFESSIONAL":
+      return [
+        "unlimitedRules",
+        "customerTags",
+        "cssEditor",
+        "posIntegration",
+        "multiLanguage",
+        "aiPricing",
+        "multiCurrency",
+        "prioritySupport",
+        "apiAccess",
+      ];
+    case "GROWTH":
+      return [
+        "unlimitedRules",
+        "customerTags",
+        "cssEditor",
+        "posIntegration",
+        "multiLanguage",
+      ];
+    case "FREE":
+    default:
+      return [];
   }
 }

@@ -28,7 +28,8 @@ import {
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "~/shopify.server";
-import { getOrCreateShop } from "~/models/shop.server";
+import { getOrCreateShop, getLocaleSettings } from "~/models/shop.server";
+import { getTranslations } from "~/i18n";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -45,8 +46,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
     console.log("[app.tsx loader] Shop record ensured");
 
+    // Get locale settings for translations
+    const localeSettings = await getLocaleSettings(session.shop);
+    const locale = localeSettings?.locale || "en";
+    const t = getTranslations(locale);
+
     return json({
       apiKey: process.env.SHOPIFY_API_KEY || "",
+      t,
     });
   } catch (error) {
     console.error("[app.tsx loader] Error:", error);
@@ -69,7 +76,7 @@ function isNavItemSelected(currentPath: string, itemPath: string, exactMatch = f
 }
 
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
+  const { apiKey, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -79,73 +86,73 @@ export default function App() {
       <Navigation.Section
         items={[
           {
-            label: "Home",
+            label: t.nav.home,
             icon: HomeIcon,
             onClick: () => navigate("/app"),
             selected: isNavItemSelected(path, "/app", true),
           },
           {
-            label: "Pricing Rules",
+            label: t.nav.pricingRules,
             icon: ListBulletedIcon,
             onClick: () => navigate("/app/rules/new"),
             selected: isNavItemSelected(path, "/app/rules"),
           },
           {
-            label: "Discounts",
+            label: t.nav.discounts,
             icon: DiscountIcon,
             onClick: () => navigate("/app/discount/new"),
             selected: isNavItemSelected(path, "/app/discount"),
           },
           {
-            label: "Bundles",
+            label: t.nav.bundles,
             icon: CollectionIcon,
             onClick: () => navigate("/app/bundles"),
             selected: isNavItemSelected(path, "/app/bundles"),
           },
           {
-            label: "Timers",
+            label: t.nav.timers,
             icon: ClockIcon,
             onClick: () => navigate("/app/timers"),
             selected: isNavItemSelected(path, "/app/timers"),
           },
           {
-            label: "B2B/Wholesale",
+            label: t.nav.wholesale,
             icon: PersonIcon,
             onClick: () => navigate("/app/wholesale"),
             selected: isNavItemSelected(path, "/app/wholesale"),
           },
           {
-            label: "A/B Testing",
+            label: t.nav.abTesting,
             icon: TargetIcon,
             onClick: () => navigate("/app/ab-testing"),
             selected: isNavItemSelected(path, "/app/ab-testing"),
           },
           {
-            label: "Post-Purchase",
+            label: t.nav.postPurchase,
             icon: OrderIcon,
             onClick: () => navigate("/app/upsells"),
             selected: isNavItemSelected(path, "/app/upsells"),
           },
           {
-            label: "AI Pricing",
+            label: t.nav.aiPricing,
             icon: AutomationIcon,
             onClick: () => navigate("/app/ai-pricing"),
             selected: isNavItemSelected(path, "/app/ai-pricing"),
           },
           {
-            label: "Analytics",
+            label: t.nav.analytics,
             icon: ChartVerticalFilledIcon,
             onClick: () => navigate("/app/analytics"),
             selected: isNavItemSelected(path, "/app/analytics"),
           },
           {
-            label: "Settings",
+            label: t.nav.settings,
             icon: SettingsIcon,
             onClick: () => navigate("/app/settings"),
             selected: isNavItemSelected(path, "/app/settings", true),
           },
           {
-            label: "Help",
+            label: t.nav.help,
             icon: QuestionCircleIcon,
             onClick: () => navigate("/app/help"),
             selected: isNavItemSelected(path, "/app/help", true),
