@@ -23,17 +23,17 @@ import {
   useIndexResourceState,
   EmptyState,
   Banner,
-  Box,
 } from "@shopify/polaris";
 import { useState } from "react";
 import { PlusIcon, RefreshIcon } from "@shopify/polaris-icons";
 
 import { authenticate } from "~/shopify.server";
 import { DeleteConfirmModal } from "~/components/DeleteConfirmModal";
-import { getShopWithRules, canCreateRule, getPlanFeatures } from "~/models/shop.server";
+import { getShopWithRules, canCreateRule, getPlanFeatures, getLocaleSettings } from "~/models/shop.server";
 import { updateRuleStatus, deletePricingRule } from "~/models/pricing-rule.server";
 import { syncRulesToShopify } from "~/services/sync-engine.server";
 import { getSyncStats } from "~/models/sync-log.server";
+import { getTranslations } from "~/i18n";
 import type { RuleStatus } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -45,12 +45,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw new Response("Shop not found", { status: 404 });
   }
 
-  const [canCreate, syncStats] = await Promise.all([
+  const [canCreate, syncStats, localeSettings] = await Promise.all([
     canCreateRule(session.shop),
     getSyncStats(shopData.id),
+    getLocaleSettings(session.shop),
   ]);
 
   const planFeatures = getPlanFeatures(shopData.plan);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
 
   return json({
     shop: {
@@ -77,6 +80,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         : 100,
       lastSync: syncStats.lastSync?.toISOString(),
     },
+    t,
   });
 };
 
@@ -120,7 +124,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { shop, rules, canCreate, syncStats } = useLoaderData<typeof loader>();
+  const { shop, rules, canCreate, syncStats, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const submit = useSubmit();
 
@@ -129,8 +133,8 @@ export default function Dashboard() {
   const [ruleToDelete, setRuleToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const resourceName = {
-    singular: "pricing rule",
-    plural: "pricing rules",
+    singular: t.rules.title.toLowerCase().replace("s", ""),
+    plural: t.rules.title.toLowerCase(),
   };
 
   const { selectedResources, allResourcesSelected, handleSelectionChange } =
@@ -162,10 +166,10 @@ export default function Dashboard() {
 
   const getStatusBadge = (status: RuleStatus) => {
     const statusConfig = {
-      DRAFT: { tone: "info" as const, label: "Draft" },
-      ACTIVE: { tone: "success" as const, label: "Active" },
-      PAUSED: { tone: "warning" as const, label: "Paused" },
-      ARCHIVED: { tone: "critical" as const, label: "Archived" },
+      DRAFT: { tone: "info" as const, label: t.rules.draft },
+      ACTIVE: { tone: "success" as const, label: t.rules.active },
+      PAUSED: { tone: "warning" as const, label: t.rules.paused },
+      ARCHIVED: { tone: "critical" as const, label: t.rules.archived },
     };
     const config = statusConfig[status];
     return <Badge tone={config.tone}>{config.label}</Badge>;
@@ -185,23 +189,23 @@ export default function Dashboard() {
       </IndexTable.Cell>
       <IndexTable.Cell>{getStatusBadge(rule.status as RuleStatus)}</IndexTable.Cell>
       <IndexTable.Cell>{rule.priority}</IndexTable.Cell>
-      <IndexTable.Cell>{rule.conditionCount} conditions</IndexTable.Cell>
-      <IndexTable.Cell>{rule.tierCount} tiers</IndexTable.Cell>
+      <IndexTable.Cell>{rule.conditionCount} {t.rules.conditions.toLowerCase()}</IndexTable.Cell>
+      <IndexTable.Cell>{rule.tierCount} {t.rules.tiers.toLowerCase()}</IndexTable.Cell>
       <IndexTable.Cell>
         {rule.syncedAt ? (
           <Text variant="bodySm" tone="subdued" as="span">
             {new Date(rule.syncedAt).toLocaleDateString()}
           </Text>
         ) : rule.syncError ? (
-          <Badge tone="critical">Sync Error</Badge>
+          <Badge tone="critical">{t.common.error}</Badge>
         ) : (
-          <Badge tone="attention">Not Synced</Badge>
+          <Badge tone="attention">{t.dashboard.never}</Badge>
         )}
       </IndexTable.Cell>
       <IndexTable.Cell>
         <InlineStack gap="200">
           <Button size="slim" onClick={() => navigate(`/app/rules/${rule.id}`)}>
-            Edit
+            {t.common.edit}
           </Button>
           {rule.status === "DRAFT" && (
             <Button
@@ -209,7 +213,7 @@ export default function Dashboard() {
               tone="success"
               onClick={() => handleStatusChange(rule.id, "ACTIVE")}
             >
-              Activate
+              {t.rules.activateRule}
             </Button>
           )}
           {rule.status === "ACTIVE" && (
@@ -217,7 +221,7 @@ export default function Dashboard() {
               size="slim"
               onClick={() => handleStatusChange(rule.id, "PAUSED")}
             >
-              Pause
+              {t.rules.pauseRule}
             </Button>
           )}
           <Button
@@ -225,7 +229,7 @@ export default function Dashboard() {
             tone="critical"
             onClick={() => openDeleteModal({ id: rule.id, name: rule.name })}
           >
-            Delete
+            {t.common.delete}
           </Button>
         </InlineStack>
       </IndexTable.Cell>
@@ -234,32 +238,29 @@ export default function Dashboard() {
 
   const emptyStateMarkup = (
     <EmptyState
-      heading="Create your first pricing rule"
+      heading={t.dashboard.createFirstRule}
       action={{
-        content: "Create Rule",
+        content: t.rules.createRule,
         onAction: () => navigate("/app/rules/new"),
       }}
       image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
     >
-      <p>
-        Set up volume discounts, wholesale pricing, or customer-specific rates
-        to boost your sales.
-      </p>
+      <p>{t.dashboard.createFirstRuleDesc}</p>
     </EmptyState>
   );
 
   return (
     <Page
-      title="Tiered Pricing Dashboard"
+      title={t.dashboard.title}
       primaryAction={{
-        content: "Create Rule",
+        content: t.rules.createRule,
         icon: PlusIcon,
         disabled: !canCreate,
         onAction: () => navigate("/app/rules/new"),
       }}
       secondaryActions={[
         {
-          content: "Sync to Shopify",
+          content: t.rules.syncRule,
           icon: RefreshIcon,
           onAction: handleSync,
         },
@@ -268,14 +269,11 @@ export default function Dashboard() {
       <BlockStack gap="500">
         {!canCreate && (
           <Banner
-            title="Rule limit reached"
-            action={{ content: "Upgrade Plan", url: "/app/settings" }}
+            title={t.dashboard.ruleLimit}
+            action={{ content: t.dashboard.upgradePlan, url: "/app/settings" }}
             tone="warning"
           >
-            <p>
-              You've reached the maximum number of rules for your plan.
-              Upgrade to create more rules.
-            </p>
+            <p>{t.dashboard.upgradePlanDesc}</p>
           </Banner>
         )}
 
@@ -285,7 +283,7 @@ export default function Dashboard() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3">
-                  Total Rules
+                  {t.rules.title}
                 </Text>
                 <Text variant="headingXl" as="p">
                   {rules.length}
@@ -303,7 +301,7 @@ export default function Dashboard() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3">
-                  Active Rules
+                  {t.dashboard.activeRules}
                 </Text>
                 <Text variant="headingXl" as="p">
                   {rules.filter((r) => r.status === "ACTIVE").length}
@@ -315,15 +313,15 @@ export default function Dashboard() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3">
-                  Sync Status
+                  {t.settings.syncStatistics}
                 </Text>
                 <InlineStack gap="200" align="start">
                   <Badge tone={syncStats.successRate >= 90 ? "success" : "warning"}>
-                    {`${syncStats.successRate}% success`}
+                    {`${syncStats.successRate}% ${t.settings.successRate.toLowerCase()}`}
                   </Badge>
                   {syncStats.lastSync && (
                     <Text variant="bodySm" tone="subdued" as="span">
-                      Last: {new Date(syncStats.lastSync).toLocaleDateString()}
+                      {t.settings.lastSync}: {new Date(syncStats.lastSync).toLocaleDateString()}
                     </Text>
                   )}
                 </InlineStack>
@@ -345,13 +343,13 @@ export default function Dashboard() {
               }
               onSelectionChange={handleSelectionChange}
               headings={[
-                { title: "Name" },
-                { title: "Status" },
-                { title: "Priority" },
-                { title: "Conditions" },
-                { title: "Tiers" },
-                { title: "Sync Status" },
-                { title: "Actions" },
+                { title: t.settings.name },
+                { title: t.rules.active },
+                { title: t.rules.priority },
+                { title: t.rules.conditions },
+                { title: t.rules.tiers },
+                { title: t.settings.syncStatistics },
+                { title: t.common.edit },
               ]}
             >
               {rowMarkup}
@@ -364,16 +362,16 @@ export default function Dashboard() {
           <BlockStack gap="200">
             <InlineStack align="space-between">
               <Text variant="headingSm" as="h3">
-                Current Plan: {shop.plan}
+                {t.settings.currentPlan}: {shop.plan}
               </Text>
               <Button variant="plain" url="/app/settings">
-                Manage Plan
+                {t.settings.title}
               </Button>
             </InlineStack>
             <Text variant="bodySm" tone="subdued" as="p">
               {shop.ruleLimit === "unlimited"
-                ? "Unlimited pricing rules"
-                : `${shop.ruleLimit} pricing rule${shop.ruleLimit === 1 ? "" : "s"} included`}
+                ? t.dashboard.unlimited + " " + t.rules.title.toLowerCase()
+                : `${shop.ruleLimit} ${t.rules.title.toLowerCase()}`}
             </Text>
           </BlockStack>
         </Card>
@@ -388,7 +386,7 @@ export default function Dashboard() {
         }}
         onConfirm={handleDelete}
         itemName={ruleToDelete?.name}
-        itemType="pricing rule"
+        itemType={t.rules.title.toLowerCase()}
       />
     </Page>
   );

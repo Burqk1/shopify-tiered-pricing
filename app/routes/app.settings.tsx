@@ -17,14 +17,12 @@ import {
   Button,
   Badge,
   Banner,
-  Divider,
   Box,
   List,
   Checkbox,
   Modal,
   Select,
 } from "@shopify/polaris";
-import { CheckIcon } from "@shopify/polaris-icons";
 
 import { authenticate } from "~/shopify.server";
 import {
@@ -43,6 +41,7 @@ import {
   cancelSubscription,
 } from "~/services/billing.server";
 import { getSyncStats } from "~/models/sync-log.server";
+import { getTranslations } from "~/i18n";
 import type { Plan } from "@prisma/client";
 import { useState, useCallback } from "react";
 
@@ -62,6 +61,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   ]);
 
   const planFeatures = getPlanFeatures(shop.plan);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
 
   return json({
     shop: {
@@ -81,6 +82,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     },
     localeSettings: localeSettings || { locale: "en" },
     supportedLocales: SUPPORTED_LOCALES,
+    t,
   });
 };
 
@@ -136,7 +138,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       await updateLocaleSettings(session.shop, locale);
 
-      return json({ success: true, message: "Language updated successfully" });
+      return json({ success: true, message: "Language updated successfully", reload: true });
     }
 
     default:
@@ -145,7 +147,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Settings() {
-  const { shop, subscription, planFeatures, syncStats, plans, posSettings, localeSettings, supportedLocales } =
+  const { shop, planFeatures, syncStats, plans, posSettings, localeSettings, supportedLocales, t } =
     useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const submit = useSubmit();
@@ -204,26 +206,31 @@ export default function Settings() {
     return null;
   }
 
+  // Reload page when language is updated
+  if (actionData && "reload" in actionData && actionData.reload) {
+    window.location.reload();
+  }
+
   const getPlanBadge = (planName: Plan) => {
     if (planName === shop.plan) {
-      return <Badge tone="success">Current Plan</Badge>;
+      return <Badge tone="success">{t.settings.currentPlanBadge}</Badge>;
     }
     if (planName === "FREE") {
-      return <Badge>Free</Badge>;
+      return <Badge>{t.settings.free}</Badge>;
     }
     return null;
   };
 
   return (
-    <Page title="Settings" backAction={{ content: "Dashboard", url: "/app" }}>
+    <Page title={t.settings.title} backAction={{ content: t.settings.backToDashboard, url: "/app" }}>
       <BlockStack gap="500">
         {actionData && "error" in actionData && actionData.error && (
-          <Banner tone="critical" title="Error">
+          <Banner tone="critical" title={t.common.error}>
             <p>{actionData.error}</p>
           </Banner>
         )}
 
-        {actionData && "success" in actionData && actionData.success && "message" in actionData && (
+        {actionData && "success" in actionData && actionData.success && "message" in actionData && !("reload" in actionData) && (
           <Banner tone="success">
             <p>{actionData.message}</p>
           </Banner>
@@ -236,31 +243,31 @@ export default function Settings() {
               <BlockStack gap="400">
                 <InlineStack align="space-between">
                   <Text variant="headingMd" as="h2">
-                    Current Plan
+                    {t.settings.currentPlan}
                   </Text>
                   <Badge tone="info">{shop.plan}</Badge>
                 </InlineStack>
 
                 <BlockStack gap="200">
                   <Text variant="bodyMd" as="p">
-                    <strong>Rule Limit:</strong>{" "}
+                    <strong>{t.settings.ruleLimit}:</strong>{" "}
                     {planFeatures.ruleLimit === "unlimited"
-                      ? "Unlimited"
+                      ? t.dashboard.unlimited
                       : planFeatures.ruleLimit}
                   </Text>
                   <Text variant="bodyMd" as="p">
-                    <strong>Customer Tags:</strong>{" "}
-                    {planFeatures.customerTags ? "Enabled" : "Disabled"}
+                    <strong>{t.settings.customerTags}:</strong>{" "}
+                    {planFeatures.customerTags ? t.settings.enabled : t.settings.disabled}
                   </Text>
                   <Text variant="bodyMd" as="p">
-                    <strong>CSS Editor:</strong>{" "}
-                    {planFeatures.cssEditor ? "Enabled" : "Disabled"}
+                    <strong>{t.settings.cssEditor}:</strong>{" "}
+                    {planFeatures.cssEditor ? t.settings.enabled : t.settings.disabled}
                   </Text>
                 </BlockStack>
 
                 {shop.plan !== "FREE" && (
                   <Button tone="critical" onClick={() => setCancelModalOpen(true)}>
-                    Cancel Subscription
+                    {t.settings.cancelSubscription}
                   </Button>
                 )}
               </BlockStack>
@@ -274,7 +281,7 @@ export default function Settings() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Available Plans
+                  {t.settings.availablePlans}
                 </Text>
 
                 <Layout>
@@ -288,12 +295,12 @@ export default function Settings() {
                       <BlockStack gap="300">
                         <InlineStack align="space-between">
                           <Text variant="headingSm" as="h3">
-                            Free
+                            {t.settings.free}
                           </Text>
                           {getPlanBadge("FREE")}
                         </InlineStack>
                         <Text variant="headingLg" as="p">
-                          $0<Text variant="bodySm" as="span">/month</Text>
+                          $0<Text variant="bodySm" as="span">{t.settings.perMonth}</Text>
                         </Text>
                         <List>
                           {plans.FREE.features.map((feature, i) => (
@@ -301,7 +308,7 @@ export default function Settings() {
                           ))}
                         </List>
                         {shop.plan !== "FREE" && (
-                          <Button disabled>Current Plan</Button>
+                          <Button disabled>{t.settings.currentPlanBadge}</Button>
                         )}
                       </BlockStack>
                     </Box>
@@ -319,13 +326,13 @@ export default function Settings() {
                       <BlockStack gap="300">
                         <InlineStack align="space-between">
                           <Text variant="headingSm" as="h3">
-                            Growth
+                            {t.settings.growth}
                           </Text>
                           {getPlanBadge("GROWTH")}
                         </InlineStack>
                         <Text variant="headingLg" as="p">
                           ${plans.GROWTH.price}
-                          <Text variant="bodySm" as="span">/month</Text>
+                          <Text variant="bodySm" as="span">{t.settings.perMonth}</Text>
                         </Text>
                         <List>
                           {plans.GROWTH.features.map((feature, i) => (
@@ -333,15 +340,15 @@ export default function Settings() {
                           ))}
                         </List>
                         {shop.plan === "GROWTH" ? (
-                          <Button disabled>Current Plan</Button>
+                          <Button disabled>{t.settings.currentPlanBadge}</Button>
                         ) : shop.plan === "PROFESSIONAL" ? (
-                          <Button disabled>Downgrade</Button>
+                          <Button disabled>{t.settings.downgrade}</Button>
                         ) : (
                           <Button
                             variant="primary"
                             onClick={() => handleUpgrade("GROWTH")}
                           >
-                            Upgrade to Growth
+                            {t.settings.upgradeToGrowth}
                           </Button>
                         )}
                       </BlockStack>
@@ -360,14 +367,14 @@ export default function Settings() {
                       <BlockStack gap="300">
                         <InlineStack align="space-between" wrap>
                           <Text variant="headingSm" as="h3">
-                            Professional
+                            {t.settings.professional}
                           </Text>
                           {getPlanBadge("PROFESSIONAL")}
-                          <Badge tone="attention">Best Value</Badge>
+                          <Badge tone="attention">{t.settings.bestValue}</Badge>
                         </InlineStack>
                         <Text variant="headingLg" as="p">
                           ${plans.PROFESSIONAL.price}
-                          <Text variant="bodySm" as="span">/month</Text>
+                          <Text variant="bodySm" as="span">{t.settings.perMonth}</Text>
                         </Text>
                         <List>
                           {plans.PROFESSIONAL.features.map((feature, i) => (
@@ -375,14 +382,14 @@ export default function Settings() {
                           ))}
                         </List>
                         {shop.plan === "PROFESSIONAL" ? (
-                          <Button disabled>Current Plan</Button>
+                          <Button disabled>{t.settings.currentPlanBadge}</Button>
                         ) : (
                           <Button
                             variant="primary"
                             tone="success"
                             onClick={() => handleUpgrade("PROFESSIONAL")}
                           >
-                            Upgrade to Pro
+                            {t.settings.upgradeToPro}
                           </Button>
                         )}
                       </BlockStack>
@@ -400,12 +407,12 @@ export default function Settings() {
             <Card>
               <BlockStack gap="300">
                 <Text variant="headingMd" as="h2">
-                  Sync Statistics
+                  {t.settings.syncStatistics}
                 </Text>
                 <InlineStack gap="400">
                   <BlockStack gap="100">
                     <Text variant="bodySm" tone="subdued" as="p">
-                      Total Syncs
+                      {t.settings.totalSyncs}
                     </Text>
                     <Text variant="headingLg" as="p">
                       {syncStats.totalSyncs}
@@ -413,24 +420,24 @@ export default function Settings() {
                   </BlockStack>
                   <BlockStack gap="100">
                     <Text variant="bodySm" tone="subdued" as="p">
-                      Success Rate
+                      {t.settings.successRate}
                     </Text>
                     <Text variant="headingLg" as="p">
                       {syncStats.totalSyncs > 0
                         ? `${Math.round(
                             (syncStats.successCount / syncStats.totalSyncs) * 100
                           )}%`
-                        : "N/A"}
+                        : t.settings.na}
                     </Text>
                   </BlockStack>
                   <BlockStack gap="100">
                     <Text variant="bodySm" tone="subdued" as="p">
-                      Last Sync
+                      {t.settings.lastSync}
                     </Text>
                     <Text variant="headingLg" as="p">
                       {syncStats.lastSync
                         ? new Date(syncStats.lastSync).toLocaleDateString()
-                        : "Never"}
+                        : t.settings.never}
                     </Text>
                   </BlockStack>
                 </InlineStack>
@@ -446,34 +453,34 @@ export default function Settings() {
               <BlockStack gap="400">
                 <InlineStack align="space-between">
                   <Text variant="headingMd" as="h2">
-                    POS Integration
+                    {t.settings.posIntegration}
                   </Text>
-                  <Badge tone="success">Available</Badge>
+                  <Badge tone="success">{t.settings.posAvailable}</Badge>
                 </InlineStack>
 
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Configure how tiered pricing works with Shopify POS for in-store sales.
+                  {t.settings.posDescription}
                 </Text>
 
                 <BlockStack gap="300">
                   <Checkbox
-                    label="Enable POS Integration"
-                    helpText="Apply volume discounts when selling through Shopify POS"
+                    label={t.settings.posEnable}
+                    helpText={t.settings.posEnableHelp}
                     checked={posEnabled}
                     onChange={setPosEnabled}
                   />
 
                   <Checkbox
-                    label="Show Tier Information"
-                    helpText="Display pricing tiers to staff on POS device"
+                    label={t.settings.posShowTierInfo}
+                    helpText={t.settings.posShowTierInfoHelp}
                     checked={posShowTierInfo}
                     onChange={setPosShowTierInfo}
                     disabled={!posEnabled}
                   />
 
                   <Checkbox
-                    label="Allow Staff Override"
-                    helpText="Let staff manually adjust discounts at checkout"
+                    label={t.settings.posStaffOverride}
+                    helpText={t.settings.posStaffOverrideHelp}
                     checked={posStaffOverride}
                     onChange={setPosStaffOverride}
                     disabled={!posEnabled}
@@ -481,7 +488,7 @@ export default function Settings() {
                 </BlockStack>
 
                 <Button onClick={handlePOSSave}>
-                  Save POS Settings
+                  {t.settings.savePosSettings}
                 </Button>
               </BlockStack>
             </Card>
@@ -494,22 +501,22 @@ export default function Settings() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Language
+                  {t.settings.language}
                 </Text>
 
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Choose your preferred language for the app interface.
+                  {t.settings.languageDescription}
                 </Text>
 
                 <Select
-                  label="App Language"
+                  label={t.settings.appLanguage}
                   options={localeOptions}
                   value={selectedLocale}
                   onChange={setSelectedLocale}
                 />
 
                 <Button onClick={handleLocaleSave}>
-                  Save Language
+                  {t.settings.saveLanguage}
                 </Button>
               </BlockStack>
             </Card>
@@ -522,20 +529,20 @@ export default function Settings() {
             <Card>
               <BlockStack gap="300">
                 <Text variant="headingMd" as="h2">
-                  Shop Information
+                  {t.settings.shopInformation}
                 </Text>
                 <BlockStack gap="100">
                   <Text variant="bodyMd" as="p">
-                    <strong>Domain:</strong> {shop.domain}
+                    <strong>{t.settings.domain}:</strong> {shop.domain}
                   </Text>
                   {shop.name && (
                     <Text variant="bodyMd" as="p">
-                      <strong>Name:</strong> {shop.name}
+                      <strong>{t.settings.name}:</strong> {shop.name}
                     </Text>
                   )}
                   {shop.email && (
                     <Text variant="bodyMd" as="p">
-                      <strong>Email:</strong> {shop.email}
+                      <strong>{t.settings.email}:</strong> {shop.email}
                     </Text>
                   )}
                 </BlockStack>
@@ -549,15 +556,15 @@ export default function Settings() {
       <Modal
         open={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
-        title="Cancel Subscription?"
+        title={t.settings.cancelModalTitle}
         primaryAction={{
-          content: "Cancel Subscription",
+          content: t.settings.confirmCancel,
           onAction: handleCancel,
           destructive: true,
         }}
         secondaryActions={[
           {
-            content: "Keep Subscription",
+            content: t.settings.keepSubscription,
             onAction: () => setCancelModalOpen(false),
           },
         ]}
@@ -565,10 +572,10 @@ export default function Settings() {
         <Modal.Section>
           <BlockStack gap="200">
             <Text as="p" variant="bodyMd">
-              Are you sure you want to cancel your subscription? You will be downgraded to the Free plan.
+              {t.settings.cancelModalDescription}
             </Text>
             <Text as="p" variant="bodyMd" tone="subdued">
-              Your current features will remain active until the end of your billing period.
+              {t.settings.cancelModalNote}
             </Text>
           </BlockStack>
         </Modal.Section>
