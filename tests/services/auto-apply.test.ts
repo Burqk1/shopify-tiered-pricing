@@ -18,6 +18,7 @@ vi.mock("~/db.server", () => ({
       findMany: vi.fn(),
       create: vi.fn(),
       count: vi.fn(),
+      update: vi.fn(),
     },
     pricingInsight: {
       findMany: vi.fn(),
@@ -42,7 +43,7 @@ describe("Auto-Apply Service", () => {
         id: "rule-1",
         shopId: "shop-1",
         name: "Default Auto-Apply",
-        status: "ACTIVE",
+        status: "ACTIVE" as const,
         minConfidence: 0.85,
         maxPriceChangePercent: 15,
         applyToAllProducts: true,
@@ -55,7 +56,7 @@ describe("Auto-Apply Service", () => {
       vi.mocked(prisma.autoApplyRule.create).mockResolvedValue(defaultRule as never);
 
       const result = await prisma.autoApplyRule.create({
-        data: defaultRule,
+        data: defaultRule as never,
       });
 
       expect(result.minConfidence).toBe(0.85);
@@ -274,13 +275,13 @@ describe("Auto-Apply Service", () => {
         newPrice: 110,
         changePercent: 10,
         confidence: 0.90,
-        status: "SUCCESS",
+        status: "SUCCESS" as const,
       };
 
       vi.mocked(prisma.autoApplyLog.create).mockResolvedValue(logEntry as never);
 
       const result = await prisma.autoApplyLog.create({
-        data: logEntry,
+        data: logEntry as never,
       });
 
       expect(result.status).toBe("SUCCESS");
@@ -297,14 +298,14 @@ describe("Auto-Apply Service", () => {
         newPrice: 110,
         changePercent: 10,
         confidence: 0.90,
-        status: "FAILED",
+        status: "FAILED" as const,
         errorMessage: "Shopify API error: Rate limit exceeded",
       };
 
       vi.mocked(prisma.autoApplyLog.create).mockResolvedValue(logEntry as never);
 
       const result = await prisma.autoApplyLog.create({
-        data: logEntry,
+        data: logEntry as never,
       });
 
       expect(result.status).toBe("FAILED");
@@ -321,14 +322,14 @@ describe("Auto-Apply Service", () => {
         newPrice: 110,
         changePercent: 10,
         confidence: 0.90,
-        status: "SKIPPED",
+        status: "SKIPPED" as const,
         errorMessage: "Product in cooldown period",
       };
 
       vi.mocked(prisma.autoApplyLog.create).mockResolvedValue(logEntry as never);
 
       const result = await prisma.autoApplyLog.create({
-        data: logEntry,
+        data: logEntry as never,
       });
 
       expect(result.status).toBe("SKIPPED");
@@ -378,15 +379,16 @@ describe("Auto-Apply Service", () => {
     });
 
     it("should mark log as reverted", async () => {
-      vi.mocked(prisma.autoApplyLog.create).mockResolvedValue({
+      vi.mocked(prisma.autoApplyLog.update).mockResolvedValue({
         id: "log-1",
         status: "REVERTED",
       } as never);
 
-      const result = await prisma.autoApplyLog.create({
+      const result = await prisma.autoApplyLog.update({
+        where: { id: "log-1" },
         data: {
           status: "REVERTED",
-        },
+        } as never,
       });
 
       expect(result.status).toBe("REVERTED");

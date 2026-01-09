@@ -27,8 +27,9 @@ import { ImageIcon, DeleteIcon } from "@shopify/polaris-icons";
 import { useState, useCallback } from "react";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { createBundle } from "~/models/bundle.server";
+import { getTranslations } from "~/i18n";
 import type { DiscountType } from "@prisma/client";
 
 interface SelectedProduct {
@@ -47,7 +48,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw new Response("Shop not found", { status: 404 });
   }
 
-  return json({ shopId: shop.id });
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
+  return json({ shopId: shop.id, t });
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -96,7 +101,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function NewBundle() {
-  const { shopId } = useLoaderData<typeof loader>();
+  const { shopId, t } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
 
@@ -142,44 +147,43 @@ export default function NewBundle() {
   const calculateSavings = () => {
     const samplePrice = 100; // $100 total
     if (discountType === "PERCENTAGE") {
-      return `${discountValue}% = $${(samplePrice * parseFloat(discountValue) / 100).toFixed(2)} off $${samplePrice}`;
+      return `${discountValue}% = $${(samplePrice * parseFloat(discountValue) / 100).toFixed(2)} ${t.bundlesPage.off} $${samplePrice}`;
     }
-    return `$${discountValue} off total`;
+    return `$${discountValue} ${t.bundlesPage.off}`;
   };
 
   return (
     <Page
-      title="Create Product Bundle"
-      backAction={{ content: "Bundles", url: "/app/bundles" }}
+      title={t.bundlesPage.createProductBundle}
+      backAction={{ content: t.bundlesPage.bundles, url: "/app/bundles" }}
     >
       <BlockStack gap="500">
         <Banner tone="info">
           <p>
-            Product bundles encourage customers to buy more items together at a
-            special discount price.
+            {t.bundlesPage.bannerInfo}
           </p>
         </Banner>
 
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Bundle Details
+              {t.bundlesPage.bundleDetails}
             </Text>
             <FormLayout>
               <TextField
-                label="Bundle Name"
+                label={t.bundlesPage.bundleName}
                 value={name}
                 onChange={setName}
-                placeholder="e.g., Summer Outfit Bundle"
-                helpText="Customers will see this name"
+                placeholder={t.bundlesPage.bundleNamePlaceholder}
+                helpText={t.bundlesPage.bundleNameHelp}
                 autoComplete="off"
               />
 
               <TextField
-                label="Description (Optional)"
+                label={t.bundlesPage.descriptionOptional}
                 value={description}
                 onChange={setDescription}
-                placeholder="e.g., Get the complete summer look!"
+                placeholder={t.bundlesPage.descriptionPlaceholder}
                 multiline={2}
                 autoComplete="off"
               />
@@ -190,22 +194,22 @@ export default function NewBundle() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Discount
+              {t.bundlesPage.discount}
             </Text>
             <FormLayout>
               <FormLayout.Group>
                 <Select
-                  label="Discount Type"
+                  label={t.bundlesPage.discountType}
                   options={[
-                    { label: "Percentage off", value: "PERCENTAGE" },
-                    { label: "Fixed amount off", value: "FIXED_AMOUNT" },
+                    { label: t.bundlesPage.percentageOff, value: "PERCENTAGE" },
+                    { label: t.bundlesPage.fixedAmountOff, value: "FIXED_AMOUNT" },
                   ]}
                   value={discountType}
                   onChange={(v) => setDiscountType(v as DiscountType)}
                 />
                 <TextField
                   type="number"
-                  label={discountType === "PERCENTAGE" ? "Percentage" : "Amount ($)"}
+                  label={discountType === "PERCENTAGE" ? t.bundlesPage.percentage : t.bundlesPage.amount}
                   value={discountValue}
                   onChange={setDiscountValue}
                   suffix={discountType === "PERCENTAGE" ? "%" : ""}
@@ -215,24 +219,24 @@ export default function NewBundle() {
               </FormLayout.Group>
 
               <Select
-                label="Bundle Type"
+                label={t.bundlesPage.bundleType}
                 options={[
-                  { label: "Must buy ALL products", value: "true" },
-                  { label: "Mix & match (any 2+)", value: "false" },
+                  { label: t.bundlesPage.mustBuyAllProducts, value: "true" },
+                  { label: t.bundlesPage.mixMatchAny, value: "false" },
                 ]}
                 value={requireAll.toString()}
                 onChange={(v) => setRequireAll(v === "true")}
                 helpText={
                   requireAll
-                    ? "Customer must add all products to cart"
-                    : "Customer can pick any 2 or more products"
+                    ? t.bundlesPage.mustBuyAllHelp
+                    : t.bundlesPage.mixMatchHelp
                 }
               />
             </FormLayout>
 
             <Box padding="300" background="bg-surface-secondary" borderRadius="200">
               <Text variant="bodySm" as="p">
-                Example savings: {calculateSavings()}
+                {t.bundlesPage.exampleSavings}: {calculateSavings()}
               </Text>
             </Box>
           </BlockStack>
@@ -241,12 +245,12 @@ export default function NewBundle() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Products in Bundle ({products.length})
+              {t.bundlesPage.productsInBundle} ({products.length})
             </Text>
 
             {products.length < 2 && (
               <Banner tone="warning">
-                Add at least 2 products to create a bundle
+                {t.bundlesPage.addAtLeast2}
               </Banner>
             )}
 
@@ -254,22 +258,21 @@ export default function NewBundle() {
             <InlineStack gap="200" align="end">
               <Box minWidth="300px">
                 <TextField
-                  label="Add Product"
+                  label={t.bundlesPage.addProduct}
                   labelHidden
                   value={productInput}
                   onChange={setProductInput}
-                  placeholder="Enter product name"
+                  placeholder={t.bundlesPage.enterProductName}
                   autoComplete="off"
                   connectedRight={
-                    <Button onClick={handleAddProduct}>Add</Button>
+                    <Button onClick={handleAddProduct}>{t.bundlesPage.add}</Button>
                   }
                 />
               </Box>
             </InlineStack>
 
             <Text variant="bodySm" tone="subdued" as="p">
-              In production, this would open Shopify's Product Picker. For demo,
-              type product names manually.
+              {t.bundlesPage.productPickerNote}
             </Text>
 
             <Divider />
@@ -277,7 +280,7 @@ export default function NewBundle() {
             {/* Product List */}
             {products.length > 0 ? (
               <ResourceList
-                resourceName={{ singular: "product", plural: "products" }}
+                resourceName={{ singular: t.bundlesPage.bundle, plural: t.bundlesPage.products }}
                 items={products}
                 renderItem={(product) => (
                   <ResourceItem
@@ -290,7 +293,7 @@ export default function NewBundle() {
                         size="small"
                       />
                     }
-                    accessibilityLabel={`View details for ${product.title}`}
+                    accessibilityLabel={`View ${product.title}`}
                   >
                     <InlineStack align="space-between" blockAlign="center">
                       <BlockStack gap="100">
@@ -308,7 +311,7 @@ export default function NewBundle() {
                         tone="critical"
                         variant="plain"
                         onClick={() => handleRemoveProduct(product.id)}
-                        accessibilityLabel={`Remove ${product.title}`}
+                        accessibilityLabel={`${t.bundlesPage.delete} ${product.title}`}
                       />
                     </InlineStack>
                   </ResourceItem>
@@ -317,7 +320,7 @@ export default function NewBundle() {
             ) : (
               <Box padding="400" background="bg-surface-secondary" borderRadius="200">
                 <Text as="p" alignment="center" tone="subdued">
-                  No products added yet
+                  {t.bundlesPage.noProductsYet}
                 </Text>
               </Box>
             )}
@@ -329,7 +332,7 @@ export default function NewBundle() {
           <Card>
             <BlockStack gap="300">
               <Text variant="headingMd" as="h2">
-                Bundle Preview
+                {t.bundlesPage.bundlePreview}
               </Text>
               <Box
                 padding="400"
@@ -340,15 +343,15 @@ export default function NewBundle() {
               >
                 <BlockStack gap="200">
                   <Text variant="headingSm" as="h3">
-                    {name || "Bundle Name"}
+                    {name || t.bundlesPage.bundleName}
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="p">
                     {products.map((p) => p.title).join(" + ")}
                   </Text>
                   <Badge tone="success">
                     {discountType === "PERCENTAGE"
-                      ? `${discountValue}% OFF`
-                      : `$${discountValue} OFF`}
+                      ? `${discountValue}% ${t.bundlesPage.off}`
+                      : `$${discountValue} ${t.bundlesPage.off}`}
                   </Badge>
                 </BlockStack>
               </Box>
@@ -357,14 +360,14 @@ export default function NewBundle() {
         )}
 
         <InlineStack align="end" gap="200">
-          <Button url="/app/bundles">Cancel</Button>
+          <Button url="/app/bundles">{t.bundlesPage.cancel}</Button>
           <Button
             variant="primary"
             onClick={handleSubmit}
             loading={isLoading}
             disabled={!name || !discountValue || products.length < 2}
           >
-            Create Bundle
+            {t.bundlesPage.createBundle}
           </Button>
         </InlineStack>
       </BlockStack>

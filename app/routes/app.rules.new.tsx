@@ -30,8 +30,9 @@ import { useState, useCallback } from "react";
 import type { GraphQLEdge, ShopifyProduct, ShopifyCollection } from "~/types/shopify";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain, canCreateRule, getPlanFeatures } from "~/models/shop.server";
+import { getShopByDomain, canCreateRule, getPlanFeatures, getLocaleSettings } from "~/models/shop.server";
 import { createPricingRule, validateTiers } from "~/models/pricing-rule.server";
+import { getTranslations } from "~/i18n";
 import { syncRulesToShopify } from "~/services/sync-engine.server";
 import type { ConditionType, DiscountType } from "@prisma/client";
 
@@ -87,6 +88,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const productsData = await productsQuery.json();
   const collectionsData = await collectionsQuery.json();
 
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
   return json({
     shop: {
       id: shop.id,
@@ -102,6 +107,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       id: e.node.id,
       title: e.node.title,
     })) || [],
+    t,
   });
 };
 
@@ -172,7 +178,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function CreateRule() {
-  const { shop, features, products, collections } = useLoaderData<typeof loader>();
+  const { shop, features, products, collections, t } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
   const submit = useSubmit();
@@ -215,22 +221,22 @@ export default function CreateRule() {
 
   return (
     <Page
-      title="Create Pricing Rule"
-      backAction={{ content: "Dashboard", url: "/app" }}
+      title={t.rulesPage.title}
+      backAction={{ content: t.rulesPage.dashboard, url: "/app" }}
       primaryAction={{
-        content: "Save & Activate",
+        content: t.rulesPage.saveActivate,
         onAction: () => handleSubmit(true),
       }}
       secondaryActions={[
         {
-          content: "Save as Draft",
+          content: t.rulesPage.saveAsDraft,
           onAction: () => handleSubmit(false),
         },
       ]}
     >
       <BlockStack gap="500">
         {actionData?.error && (
-          <Banner tone="critical" title="Error">
+          <Banner tone="critical" title={t.rulesPage.error}>
             <p>{actionData.error}</p>
           </Banner>
         )}
@@ -241,27 +247,27 @@ export default function CreateRule() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Basic Information
+                  {t.rulesPage.basicInfo}
                 </Text>
                 <FormLayout>
                   <TextField
-                    label="Rule Name"
+                    label={t.rulesPage.ruleName}
                     value={name}
                     onChange={setName}
-                    placeholder="e.g., Wholesale T-Shirt Discount"
+                    placeholder={t.rulesPage.ruleNamePlaceholder}
                     autoComplete="off"
-                    helpText="A descriptive name to identify this rule"
+                    helpText={t.rulesPage.ruleNameHelp}
                   />
                   <Select
-                    label="Priority"
+                    label={t.rulesPage.priority}
                     options={[
-                      { label: "Low (0)", value: "0" },
-                      { label: "Medium (5)", value: "5" },
-                      { label: "High (10)", value: "10" },
+                      { label: t.rulesPage.priorityLow, value: "0" },
+                      { label: t.rulesPage.priorityMedium, value: "5" },
+                      { label: t.rulesPage.priorityHigh, value: "10" },
                     ]}
                     value={priority}
                     onChange={setPriority}
-                    helpText="Higher priority rules take precedence when multiple rules match"
+                    helpText={t.rulesPage.priorityHelp}
                   />
                 </FormLayout>
               </BlockStack>
@@ -275,10 +281,10 @@ export default function CreateRule() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Conditions
+                  {t.rulesPage.conditions}
                 </Text>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Define which products or customers this rule applies to.
+                  {t.rulesPage.conditionsDesc}
                 </Text>
                 <ConditionSelector
                   conditions={conditions}
@@ -298,11 +304,10 @@ export default function CreateRule() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Discount Tiers
+                  {t.rulesPage.discountTiers}
                 </Text>
                 <Text variant="bodyMd" tone="subdued" as="p">
-                  Set up quantity-based discounts. Customers will automatically get
-                  the best applicable tier.
+                  {t.rulesPage.discountTiersDesc}
                 </Text>
                 <TierBuilder tiers={tiers} onChange={setTiers} />
               </BlockStack>
@@ -316,28 +321,28 @@ export default function CreateRule() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Schedule Campaign
+                  {t.rulesPage.scheduleCampaign}
                 </Text>
                 <Checkbox
-                  label="Enable scheduling"
+                  label={t.rulesPage.enableScheduling}
                   checked={enableScheduling}
                   onChange={setEnableScheduling}
-                  helpText="Set specific start and end dates for this discount rule"
+                  helpText={t.rulesPage.enableSchedulingHelp}
                 />
                 {enableScheduling && (
                   <FormLayout>
                     <FormLayout.Group>
                       <TextField
                         type="date"
-                        label="Start Date"
+                        label={t.rulesPage.startDate}
                         value={startDate}
                         onChange={setStartDate}
                         autoComplete="off"
-                        helpText="Leave empty to start immediately"
+                        helpText={t.rulesPage.startDateHelp}
                       />
                       <TextField
                         type="time"
-                        label="Start Time"
+                        label={t.rulesPage.startTime}
                         value={startTime}
                         onChange={setStartTime}
                         autoComplete="off"
@@ -346,22 +351,22 @@ export default function CreateRule() {
                     <FormLayout.Group>
                       <TextField
                         type="date"
-                        label="End Date"
+                        label={t.rulesPage.endDate}
                         value={endDate}
                         onChange={setEndDate}
                         autoComplete="off"
-                        helpText="Leave empty for no end date"
+                        helpText={t.rulesPage.endDateHelp}
                       />
                       <TextField
                         type="time"
-                        label="End Time"
+                        label={t.rulesPage.endTime}
                         value={endTime}
                         onChange={setEndTime}
                         autoComplete="off"
                       />
                     </FormLayout.Group>
                     <Banner tone="info">
-                      <p>Scheduled campaigns will automatically activate and deactivate at the specified times.</p>
+                      <p>{t.rulesPage.scheduleBanner}</p>
                     </Banner>
                   </FormLayout>
                 )}
@@ -374,10 +379,10 @@ export default function CreateRule() {
         <Layout>
           <Layout.Section>
             <InlineStack gap="300" align="end">
-              <Button onClick={() => navigate("/app")}>Cancel</Button>
-              <Button onClick={() => handleSubmit(false)}>Save as Draft</Button>
+              <Button onClick={() => navigate("/app")}>{t.rulesPage.cancel}</Button>
+              <Button onClick={() => handleSubmit(false)}>{t.rulesPage.saveAsDraft}</Button>
               <Button variant="primary" onClick={() => handleSubmit(true)}>
-                Save & Activate
+                {t.rulesPage.saveActivate}
               </Button>
             </InlineStack>
           </Layout.Section>

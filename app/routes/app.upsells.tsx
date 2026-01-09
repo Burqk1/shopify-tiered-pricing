@@ -50,8 +50,9 @@ import { useState, useCallback } from "react";
 import type { GraphQLEdge, ShopifyProduct } from "~/types/shopify";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getUpsellOffers, getUpsellStats, createUpsellOffer, updateUpsellOffer, updateUpsellStatus, deleteUpsellOffer } from "~/models/upsell.server";
+import { getTranslations } from "~/i18n";
 import type { DiscountType, PPTriggerType } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -158,6 +159,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     };
   });
 
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
   return json({
     offers: enrichedOffers,
     products: productsData.data?.products?.edges?.map((e: GraphQLEdge<ShopifyProduct>) => ({
@@ -167,6 +172,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       price: e.node.priceRangeV2?.minVariantPrice?.amount,
     })) || [],
     stats,
+    t,
+    locale,
   });
 };
 
@@ -238,7 +245,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function PostPurchaseUpsells() {
-  const { offers, products, stats } = useLoaderData<typeof loader>();
+  const { offers, products, stats, t, locale } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
 
@@ -264,7 +271,7 @@ export default function PostPurchaseUpsells() {
   });
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale === "en" ? "en-US" : locale, {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
@@ -272,8 +279,8 @@ export default function PostPurchaseUpsells() {
 
   const getStatusBadge = (status: string) => {
     return status === "ACTIVE" ?
-      <Badge tone="success">Active</Badge> :
-      <Badge>Draft</Badge>;
+      <Badge tone="success">{t.upsellsPage.active}</Badge> :
+      <Badge>{t.upsellsPage.draft}</Badge>;
   };
 
   const handleCreateOffer = () => {
@@ -299,10 +306,10 @@ export default function PostPurchaseUpsells() {
 
   return (
     <Page
-      title="Post-Purchase Upsells"
-      subtitle="One-click offers shown after checkout to increase order value"
+      title={t.upsellsPage.title}
+      subtitle={t.upsellsPage.subtitle}
       primaryAction={{
-        content: "Create Upsell",
+        content: t.upsellsPage.createUpsell,
         icon: PlusIcon,
         onAction: handleCreateOffer,
       }}
@@ -313,9 +320,9 @@ export default function PostPurchaseUpsells() {
           <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
-                <Text variant="bodySm" as="span" tone="subdued">Total Impressions</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.totalImpressions}</Text>
                 <Text variant="headingLg" as="h3">{stats.totalImpressions.toLocaleString()}</Text>
-                <Text variant="bodySm" as="span" tone="subdued">Offers shown</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.offersShown}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -323,9 +330,9 @@ export default function PostPurchaseUpsells() {
           <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
-                <Text variant="bodySm" as="span" tone="subdued">Conversions</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.conversions}</Text>
                 <Text variant="headingLg" as="h3">{stats.totalConversions}</Text>
-                <Text variant="bodySm" as="span" tone="success">{stats.avgConversionRate}% rate</Text>
+                <Text variant="bodySm" as="span" tone="success">{stats.avgConversionRate}% {t.upsellsPage.rate}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -333,11 +340,11 @@ export default function PostPurchaseUpsells() {
           <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
-                <Text variant="bodySm" as="span" tone="subdued">Upsell Revenue</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.upsellRevenue}</Text>
                 <Text variant="headingLg" as="h3" tone="success">
                   {formatCurrency(stats.totalRevenue)}
                 </Text>
-                <Text variant="bodySm" as="span" tone="subdued">Additional revenue</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.additionalRevenue}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -345,9 +352,9 @@ export default function PostPurchaseUpsells() {
           <Layout.Section variant="oneThird">
             <Card>
               <BlockStack gap="200">
-                <Text variant="bodySm" as="span" tone="subdued">Active Offers</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.activeOffers}</Text>
                 <Text variant="headingLg" as="h3">{stats.totalOffers}</Text>
-                <Text variant="bodySm" as="span" tone="subdued">Running now</Text>
+                <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.runningNow}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -355,12 +362,11 @@ export default function PostPurchaseUpsells() {
 
         {/* Banner */}
         <Banner
-          title="Boost your revenue with post-purchase upsells"
+          title={t.upsellsPage.bannerTitle}
           tone="info"
         >
           <p>
-            Post-purchase upsells have a 10-15% conversion rate on average because
-            customers have already committed to buying. No extra payment entry needed!
+            {t.upsellsPage.bannerDesc}
           </p>
         </Banner>
 
@@ -368,23 +374,22 @@ export default function PostPurchaseUpsells() {
         {offers.length === 0 ? (
           <Card>
             <EmptyState
-              heading="Create your first post-purchase upsell"
+              heading={t.upsellsPage.createFirstUpsell}
               action={{
-                content: "Create Upsell Offer",
+                content: t.upsellsPage.createUpsellOffer,
                 onAction: handleCreateOffer,
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
               <p>
-                Show special offers to customers right after they complete checkout.
-                One-click add to order means no friction and higher conversions.
+                {t.upsellsPage.emptyStateDesc}
               </p>
             </EmptyState>
           </Card>
         ) : (
           <Card>
             <BlockStack gap="400">
-              <Text variant="headingMd" as="h2">Your Upsell Offers</Text>
+              <Text variant="headingMd" as="h2">{t.upsellsPage.yourUpsellOffers}</Text>
 
               {offers.map((offer) => (
                 <Box
@@ -419,7 +424,7 @@ export default function PostPurchaseUpsells() {
                         <InlineStack gap="100" blockAlign="center">
                           <Icon source={TargetIcon} tone="subdued" />
                           <Text variant="bodySm" as="span" tone="subdued">
-                            {offer.triggerType === "ALL_ORDERS" ? "All orders" : "Specific products"}
+                            {offer.triggerType === "ALL_ORDERS" ? t.upsellsPage.allOrders : t.upsellsPage.specificProducts}
                           </Text>
                         </InlineStack>
                       </BlockStack>
@@ -428,30 +433,30 @@ export default function PostPurchaseUpsells() {
                     {/* Stats */}
                     <InlineStack gap="600">
                       <BlockStack gap="100">
-                        <Text variant="bodySm" as="span" tone="subdued">Impressions</Text>
+                        <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.impressions}</Text>
                         <Text variant="headingSm" as="p">{offer.impressions.toLocaleString()}</Text>
                       </BlockStack>
 
                       <BlockStack gap="100">
-                        <Text variant="bodySm" as="span" tone="subdued">Conversions</Text>
+                        <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.conversions}</Text>
                         <Text variant="headingSm" as="p">{offer.conversions}</Text>
                       </BlockStack>
 
                       <BlockStack gap="100">
-                        <Text variant="bodySm" as="span" tone="subdued">Rate</Text>
+                        <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.conversionRate}</Text>
                         <Text variant="headingSm" as="p" tone="success">{offer.conversionRate}%</Text>
                       </BlockStack>
 
                       <BlockStack gap="100">
-                        <Text variant="bodySm" as="span" tone="subdued">Revenue</Text>
+                        <Text variant="bodySm" as="span" tone="subdued">{t.upsellsPage.revenue}</Text>
                         <Text variant="headingSm" as="p" tone="success">
                           {formatCurrency(offer.revenue)}
                         </Text>
                       </BlockStack>
 
                       <InlineStack gap="200">
-                        <Button icon={EditIcon} size="slim" onClick={() => {}}>Edit</Button>
-                        <Button icon={DeleteIcon} size="slim" tone="critical" onClick={() => {}}>Delete</Button>
+                        <Button icon={EditIcon} size="slim" onClick={() => {}}>{t.upsellsPage.edit}</Button>
+                        <Button icon={DeleteIcon} size="slim" tone="critical" onClick={() => {}}>{t.upsellsPage.delete}</Button>
                       </InlineStack>
                     </InlineStack>
                   </InlineStack>
@@ -465,16 +470,16 @@ export default function PostPurchaseUpsells() {
         <Modal
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          title={selectedOffer ? "Edit Upsell Offer" : "Create Upsell Offer"}
+          title={selectedOffer ? t.upsellsPage.editUpsellOffer : t.upsellsPage.createUpsellOffer}
           primaryAction={{
-            content: selectedOffer ? "Save Changes" : "Create Offer",
+            content: selectedOffer ? t.upsellsPage.saveChanges : t.upsellsPage.createOffer,
             onAction: () => {
               setShowCreateModal(false);
             },
           }}
           secondaryActions={[
             {
-              content: "Cancel",
+              content: t.upsellsPage.cancel,
               onAction: () => setShowCreateModal(false),
             },
           ]}
@@ -483,30 +488,30 @@ export default function PostPurchaseUpsells() {
           <Modal.Section>
             <BlockStack gap="500">
               {/* Basic Info */}
-              <Text variant="headingSm" as="h3">Basic Information</Text>
+              <Text variant="headingSm" as="h3">{t.upsellsPage.basicInformation}</Text>
 
               <TextField
-                label="Offer Name"
+                label={t.upsellsPage.offerName}
                 value={formState.name}
                 onChange={(value) => setFormState({ ...formState, name: value })}
-                placeholder="e.g., Premium Belt Upsell"
+                placeholder={t.upsellsPage.offerNamePlaceholder}
                 autoComplete="off"
-                helpText="Internal name to identify this offer"
+                helpText={t.upsellsPage.offerNameHelp}
               />
 
               <Divider />
 
               {/* Trigger */}
-              <Text variant="headingSm" as="h3">When to Show</Text>
+              <Text variant="headingSm" as="h3">{t.upsellsPage.whenToShow}</Text>
 
               <Select
-                label="Trigger Type"
+                label={t.upsellsPage.triggerType}
                 options={[
-                  { label: "All Orders", value: "ALL_ORDERS" },
-                  { label: "Orders Above Minimum Value", value: "MIN_ORDER_VALUE" },
-                  { label: "Orders with Specific Products", value: "SPECIFIC_PRODUCTS" },
-                  { label: "First-Time Buyers Only", value: "FIRST_TIME_BUYERS" },
-                  { label: "Returning Customers Only", value: "RETURNING_CUSTOMERS" },
+                  { label: t.upsellsPage.allOrdersTrigger, value: "ALL_ORDERS" },
+                  { label: t.upsellsPage.minOrderValueTrigger, value: "MIN_ORDER_VALUE" },
+                  { label: t.upsellsPage.specificProductsTrigger, value: "SPECIFIC_PRODUCTS" },
+                  { label: t.upsellsPage.firstTimeBuyers, value: "FIRST_TIME_BUYERS" },
+                  { label: t.upsellsPage.returningCustomers, value: "RETURNING_CUSTOMERS" },
                 ]}
                 value={formState.triggerType}
                 onChange={(value) => setFormState({ ...formState, triggerType: value })}
@@ -514,7 +519,7 @@ export default function PostPurchaseUpsells() {
 
               {formState.triggerType === "MIN_ORDER_VALUE" && (
                 <TextField
-                  label="Minimum Order Value"
+                  label={t.upsellsPage.minimumOrderValue}
                   type="number"
                   value={formState.triggerMinValue}
                   onChange={(value) => setFormState({ ...formState, triggerMinValue: value })}
@@ -526,12 +531,12 @@ export default function PostPurchaseUpsells() {
               <Divider />
 
               {/* Offer Product */}
-              <Text variant="headingSm" as="h3">What to Offer</Text>
+              <Text variant="headingSm" as="h3">{t.upsellsPage.whatToOffer}</Text>
 
               <Select
-                label="Product to Offer"
+                label={t.upsellsPage.productToOffer}
                 options={[
-                  { label: "Select a product...", value: "" },
+                  { label: t.upsellsPage.selectProduct, value: "" },
                   ...products.map((p: { id: string; title: string; price: string }) => ({
                     label: `${p.title} - $${parseFloat(p.price).toFixed(2)}`,
                     value: p.id,
@@ -544,16 +549,16 @@ export default function PostPurchaseUpsells() {
               <FormLayout>
                 <FormLayout.Group>
                   <Select
-                    label="Discount Type"
+                    label={t.upsellsPage.discountType}
                     options={[
-                      { label: "Percentage Off", value: "PERCENTAGE" },
-                      { label: "Fixed Amount Off", value: "FIXED_AMOUNT" },
+                      { label: t.upsellsPage.percentageOff, value: "PERCENTAGE" },
+                      { label: t.upsellsPage.fixedAmountOff, value: "FIXED_AMOUNT" },
                     ]}
                     value={formState.discountType}
                     onChange={(value) => setFormState({ ...formState, discountType: value })}
                   />
                   <TextField
-                    label="Discount Value"
+                    label={t.upsellsPage.discountValue}
                     type="number"
                     value={formState.discountValue}
                     onChange={(value) => setFormState({ ...formState, discountValue: value })}
@@ -566,17 +571,17 @@ export default function PostPurchaseUpsells() {
               <Divider />
 
               {/* Copy */}
-              <Text variant="headingSm" as="h3">Display Text</Text>
+              <Text variant="headingSm" as="h3">{t.upsellsPage.displayText}</Text>
 
               <TextField
-                label="Headline"
+                label={t.upsellsPage.headline}
                 value={formState.headline}
                 onChange={(value) => setFormState({ ...formState, headline: value })}
                 autoComplete="off"
               />
 
               <TextField
-                label="Subheadline"
+                label={t.upsellsPage.subheadline}
                 value={formState.subheadline}
                 onChange={(value) => setFormState({ ...formState, subheadline: value })}
                 autoComplete="off"
@@ -585,13 +590,13 @@ export default function PostPurchaseUpsells() {
               <FormLayout>
                 <FormLayout.Group>
                   <TextField
-                    label="CTA Button Text"
+                    label={t.upsellsPage.ctaButtonText}
                     value={formState.ctaText}
                     onChange={(value) => setFormState({ ...formState, ctaText: value })}
                     autoComplete="off"
                   />
                   <TextField
-                    label="Decline Text"
+                    label={t.upsellsPage.declineText}
                     value={formState.declineText}
                     onChange={(value) => setFormState({ ...formState, declineText: value })}
                     autoComplete="off"
@@ -602,31 +607,29 @@ export default function PostPurchaseUpsells() {
               <Divider />
 
               {/* Timer */}
-              <Text variant="headingSm" as="h3">Urgency Timer</Text>
+              <Text variant="headingSm" as="h3">{t.upsellsPage.urgencyTimer}</Text>
 
               <Checkbox
-                label="Show countdown timer"
+                label={t.upsellsPage.showCountdownTimer}
                 checked={formState.showTimer}
                 onChange={(value) => setFormState({ ...formState, showTimer: value })}
-                helpText="Creates urgency and increases conversions"
+                helpText={t.upsellsPage.timerHelp}
               />
 
               {formState.showTimer && (
                 <TextField
-                  label="Timer Duration (seconds)"
+                  label={t.upsellsPage.timerDuration}
                   type="number"
                   value={formState.timerDuration}
                   onChange={(value) => setFormState({ ...formState, timerDuration: value })}
-                  helpText="5 minutes (300 seconds) is recommended"
+                  helpText={t.upsellsPage.timerDurationHelp}
                   autoComplete="off"
                 />
               )}
 
               <Banner tone="info">
                 <p>
-                  <strong>Tip:</strong> Keep your offer simple and valuable. A 20-30% discount
-                  on a complementary product works best. Customers appreciate offers that
-                  genuinely add value to their purchase.
+                  <strong>{t.upsellsPage.tipTitle}:</strong> {t.upsellsPage.tipDesc}
                 </p>
               </Banner>
             </BlockStack>

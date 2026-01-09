@@ -1,0 +1,294 @@
+{% comment %}
+  Announcement Progress Bar Block
+  Shows as a sticky announcement bar at the top of the page
+{% endcomment %}
+
+{% assign threshold = block.settings.threshold | default: 50 %}
+{% assign cart_total = cart.total_price | divided_by: 100.0 %}
+{% assign remaining = threshold | minus: cart_total %}
+{% assign progress = cart_total | divided_by: threshold | times: 100 %}
+{% if progress > 100 %}
+  {% assign progress = 100 %}
+{% endif %}
+{% assign is_complete = false %}
+{% if cart_total >= threshold %}
+  {% assign is_complete = true %}
+  {% assign remaining = 0 %}
+{% endif %}
+
+{% unless block.settings.hide_when_complete and is_complete %}
+<div class="announcement-progress"
+     data-threshold="{{ threshold }}"
+     style="
+       --announcement-bg: {{ block.settings.bg_color }};
+       --announcement-text: {{ block.settings.text_color }};
+       --announcement-bar: {{ block.settings.bar_color }};
+       --announcement-bar-bg: {{ block.settings.bar_bg_color }};
+     ">
+  <div class="announcement-progress__inner">
+    <div class="announcement-progress__content">
+      {% if is_complete %}
+        <span class="announcement-progress__icon">{{ block.settings.complete_icon }}</span>
+        <span class="announcement-progress__text">{{ block.settings.complete_message }}</span>
+      {% elsif cart_total == 0 %}
+        <span class="announcement-progress__icon">{{ block.settings.icon }}</span>
+        <span class="announcement-progress__text">
+          {{ block.settings.empty_message | replace: '{amount}', remaining | money }}
+        </span>
+      {% else %}
+        <span class="announcement-progress__icon">{{ block.settings.icon }}</span>
+        <span class="announcement-progress__text">
+          {{ block.settings.progress_message | replace: '{amount}', remaining | money }}
+        </span>
+      {% endif %}
+    </div>
+
+    {% if block.settings.show_bar and progress < 100 %}
+    <div class="announcement-progress__bar">
+      <div class="announcement-progress__bar-fill" style="width: {{ progress }}%"></div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if block.settings.dismissible %}
+  <button class="announcement-progress__close" aria-label="Close">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+    </svg>
+  </button>
+  {% endif %}
+</div>
+{% endunless %}
+
+<style>
+  .announcement-progress {
+    background: var(--announcement-bg);
+    color: var(--announcement-text);
+    padding: 10px 20px;
+    text-align: center;
+    position: relative;
+    {% if block.settings.sticky %}
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    {% endif %}
+  }
+
+  .announcement-progress__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .announcement-progress__content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .announcement-progress__icon {
+    font-size: 1.2em;
+  }
+
+  .announcement-progress__text {
+    font-size: {{ block.settings.font_size }}px;
+    font-weight: {{ block.settings.font_weight }};
+  }
+
+  .announcement-progress__bar {
+    height: 4px;
+    background: var(--announcement-bar-bg);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .announcement-progress__bar-fill {
+    height: 100%;
+    background: var(--announcement-bar);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .announcement-progress__close {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--announcement-text);
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .announcement-progress__close:hover {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn = document.querySelector('.announcement-progress__close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function() {
+        const bar = document.querySelector('.announcement-progress');
+        if (bar) {
+          bar.style.display = 'none';
+          sessionStorage.setItem('announcement-progress-dismissed', 'true');
+        }
+      });
+    }
+
+    // Check if dismissed
+    if (sessionStorage.getItem('announcement-progress-dismissed') === 'true') {
+      const bar = document.querySelector('.announcement-progress');
+      if (bar) bar.style.display = 'none';
+    }
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Announcement Progress",
+  "class": "announcement-progress-section",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Threshold"
+    },
+    {
+      "type": "number",
+      "id": "threshold",
+      "label": "Threshold Amount",
+      "default": 50
+    },
+    {
+      "type": "header",
+      "content": "Messages"
+    },
+    {
+      "type": "text",
+      "id": "icon",
+      "label": "Icon",
+      "default": "🚚"
+    },
+    {
+      "type": "text",
+      "id": "complete_icon",
+      "label": "Complete Icon",
+      "default": "✅"
+    },
+    {
+      "type": "text",
+      "id": "empty_message",
+      "label": "Empty Cart Message",
+      "default": "Free shipping on orders over {amount}!"
+    },
+    {
+      "type": "text",
+      "id": "progress_message",
+      "label": "Progress Message",
+      "default": "Add {amount} more for FREE shipping!"
+    },
+    {
+      "type": "text",
+      "id": "complete_message",
+      "label": "Complete Message",
+      "default": "You qualify for FREE shipping!"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background Color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "bar_color",
+      "label": "Progress Bar Color",
+      "default": "#4CAF50"
+    },
+    {
+      "type": "color",
+      "id": "bar_bg_color",
+      "label": "Progress Bar Background",
+      "default": "#444444"
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "label": "Font Size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 14,
+      "unit": "px"
+    },
+    {
+      "type": "select",
+      "id": "font_weight",
+      "label": "Font Weight",
+      "options": [
+        { "value": "400", "label": "Normal" },
+        { "value": "500", "label": "Medium" },
+        { "value": "600", "label": "Semi Bold" },
+        { "value": "700", "label": "Bold" }
+      ],
+      "default": "500"
+    },
+    {
+      "type": "header",
+      "content": "Behavior"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_bar",
+      "label": "Show Progress Bar",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "sticky",
+      "label": "Sticky Position",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "dismissible",
+      "label": "Allow Dismiss",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_when_complete",
+      "label": "Hide When Complete",
+      "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "Announcement Progress",
+      "category": "Header"
+    }
+  ]
+}
+{% endschema %}

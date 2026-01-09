@@ -24,8 +24,9 @@ import {
 import { useState } from "react";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getAnalyticsSummary } from "~/models/analytics.server";
+import { getTranslations } from "~/i18n";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -40,15 +41,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const analytics = await getAnalyticsSummary(shop.id, days);
 
-  return json({ analytics, days, currency: "USD" });
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
+  return json({ analytics, days, currency: "USD", t, locale });
 };
 
 export default function Analytics() {
-  const { analytics, days, currency } = useLoaderData<typeof loader>();
+  const { analytics, days, currency, t, locale } = useLoaderData<typeof loader>();
   const [selectedPeriod, setSelectedPeriod] = useState(days.toString());
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(locale === "en" ? "en-US" : locale, {
       style: "currency",
       currency,
     }).format(value);
@@ -66,18 +71,18 @@ export default function Analytics() {
 
   return (
     <Page
-      title="Analytics Dashboard"
-      subtitle="Track your discount performance and revenue impact"
-      backAction={{ content: "Home", url: "/app" }}
+      title={t.analyticsPage.title}
+      subtitle={t.analyticsPage.subtitle}
+      backAction={{ content: t.analyticsPage.backToHome, url: "/app" }}
       secondaryActions={[
         {
-          content: "Export Detailed CSV",
+          content: t.analyticsPage.exportDetailedCSV,
           onAction: () => {
             window.location.href = `/api/analytics-export?days=${selectedPeriod}&type=detailed`;
           },
         },
         {
-          content: "Export Summary CSV",
+          content: t.analyticsPage.exportSummaryCSV,
           onAction: () => {
             window.location.href = `/api/analytics-export?days=${selectedPeriod}&type=summary`;
           },
@@ -89,15 +94,15 @@ export default function Analytics() {
         <Card>
           <InlineStack align="space-between" blockAlign="center">
             <Text variant="headingSm" as="h3">
-              Time Period
+              {t.analyticsPage.timePeriod}
             </Text>
             <Select
               label=""
               labelHidden
               options={[
-                { label: "Last 7 days", value: "7" },
-                { label: "Last 30 days", value: "30" },
-                { label: "Last 90 days", value: "90" },
+                { label: t.analyticsPage.last7Days, value: "7" },
+                { label: t.analyticsPage.last30Days, value: "30" },
+                { label: t.analyticsPage.last90Days, value: "90" },
               ]}
               value={selectedPeriod}
               onChange={(value) => {
@@ -114,13 +119,13 @@ export default function Analytics() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3" tone="subdued">
-                  Total Orders with Discount
+                  {t.analyticsPage.totalOrdersWithDiscount}
                 </Text>
                 <Text variant="heading2xl" as="p">
                   {analytics.summary.totalOrders}
                 </Text>
                 <Text variant="bodySm" tone="subdued" as="p">
-                  orders used volume discounts
+                  {t.analyticsPage.ordersUsedVolumeDiscounts}
                 </Text>
               </BlockStack>
             </Card>
@@ -130,13 +135,13 @@ export default function Analytics() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3" tone="subdued">
-                  Revenue from Discounted Orders
+                  {t.analyticsPage.revenueFromDiscountedOrders}
                 </Text>
                 <Text variant="heading2xl" as="p">
                   {formatCurrency(analytics.summary.totalRevenue)}
                 </Text>
                 <Text variant="bodySm" tone="success" as="p">
-                  {formatCurrency(analytics.summary.totalDiscount)} saved by customers
+                  {formatCurrency(analytics.summary.totalDiscount)} {t.analyticsPage.savedByCustomers}
                 </Text>
               </BlockStack>
             </Card>
@@ -146,13 +151,13 @@ export default function Analytics() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3" tone="subdued">
-                  Average Discount
+                  {t.analyticsPage.averageDiscount}
                 </Text>
                 <Text variant="heading2xl" as="p">
                   {formatPercent(analytics.summary.averageDiscount)}
                 </Text>
                 <Text variant="bodySm" tone="subdued" as="p">
-                  average discount per item
+                  {t.analyticsPage.averageDiscountPerItem}
                 </Text>
               </BlockStack>
             </Card>
@@ -163,13 +168,12 @@ export default function Analytics() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Daily Revenue Trend
+              {t.analyticsPage.dailyRevenueTrend}
             </Text>
             {analytics.dailyStats.length === 0 ? (
               <Box padding="400" background="bg-surface-secondary" borderRadius="200">
                 <Text as="p" alignment="center" tone="subdued">
-                  No discount usage data yet. Revenue will appear here once
-                  customers start using your volume discounts.
+                  {t.analyticsPage.noDiscountDataYet}
                 </Text>
               </Box>
             ) : (
@@ -178,7 +182,7 @@ export default function Analytics() {
                   <InlineStack key={day.date} gap="300" align="start" blockAlign="center">
                     <Box minWidth="80px">
                       <Text variant="bodySm" as="span">
-                        {new Date(day.date).toLocaleDateString("en-US", {
+                        {new Date(day.date).toLocaleDateString(locale === "en" ? "en-US" : locale, {
                           month: "short",
                           day: "numeric",
                         })}
@@ -194,7 +198,7 @@ export default function Analytics() {
                       />
                     </Box>
                     <Text variant="bodySm" as="span">
-                      {formatCurrency(day.revenue)} ({day.orders} orders)
+                      {formatCurrency(day.revenue)} ({day.orders} {t.analyticsPage.orders})
                     </Text>
                   </InlineStack>
                 ))}
@@ -209,20 +213,20 @@ export default function Analytics() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Performance by Tier
+                  {t.analyticsPage.performanceByTier}
                 </Text>
                 {analytics.byTier.length === 0 ? (
                   <Text tone="subdued" as="p">
-                    No tier data yet
+                    {t.analyticsPage.noTierDataYet}
                   </Text>
                 ) : (
                   <DataTable
                     columnContentTypes={["text", "numeric", "numeric"]}
-                    headings={["Tier", "Uses", "Revenue"]}
-                    rows={analytics.byTier.map((t) => [
-                      t.tier,
-                      t.count.toString(),
-                      formatCurrency(t.revenue),
+                    headings={[t.analyticsPage.tier, t.analyticsPage.uses, t.analyticsPage.revenue]}
+                    rows={analytics.byTier.map((tier) => [
+                      tier.tier,
+                      tier.count.toString(),
+                      formatCurrency(tier.revenue),
                     ])}
                   />
                 )}
@@ -234,16 +238,16 @@ export default function Analytics() {
             <Card>
               <BlockStack gap="400">
                 <Text variant="headingMd" as="h2">
-                  Performance by Rule
+                  {t.analyticsPage.performanceByRule}
                 </Text>
                 {analytics.byRule.length === 0 ? (
                   <Text tone="subdued" as="p">
-                    No rule data yet
+                    {t.analyticsPage.noRuleDataYet}
                   </Text>
                 ) : (
                   <DataTable
                     columnContentTypes={["text", "numeric", "numeric"]}
-                    headings={["Rule", "Uses", "Revenue"]}
+                    headings={[t.analyticsPage.rule, t.analyticsPage.uses, t.analyticsPage.revenue]}
                     rows={analytics.byRule.map((r) => [
                       r.ruleId.slice(0, 8) + "...",
                       r.count.toString(),
@@ -260,17 +264,16 @@ export default function Analytics() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Top Products by Discount Revenue
+              {t.analyticsPage.topProductsByDiscountRevenue}
             </Text>
             {analytics.topProducts.length === 0 ? (
               <Text tone="subdued" as="p">
-                No product data yet. This will show your best-performing
-                products once customers start using discounts.
+                {t.analyticsPage.noProductDataYet}
               </Text>
             ) : (
               <DataTable
                 columnContentTypes={["text", "numeric", "numeric", "numeric"]}
-                headings={["Product", "Times Discounted", "Units Sold", "Revenue"]}
+                headings={[t.analyticsPage.product, t.analyticsPage.timesDiscounted, t.analyticsPage.unitsSold, t.analyticsPage.revenue]}
                 rows={analytics.topProducts.map((p) => [
                   p.title,
                   p.count.toString(),
@@ -286,12 +289,11 @@ export default function Analytics() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Recent Discount Usage
+              {t.analyticsPage.recentDiscountUsage}
             </Text>
             {analytics.recentUsages.length === 0 ? (
               <Text tone="subdued" as="p">
-                No recent activity. Discount usage will appear here in
-                real-time.
+                {t.analyticsPage.noRecentActivity}
               </Text>
             ) : (
               <DataTable
@@ -302,13 +304,13 @@ export default function Analytics() {
                   "text",
                   "text",
                 ]}
-                headings={["Order", "Product", "Qty", "Discount", "Date"]}
+                headings={[t.analyticsPage.order, t.analyticsPage.product, t.analyticsPage.qty, t.analyticsPage.discount, t.analyticsPage.date]}
                 rows={analytics.recentUsages.map((u) => [
                   `#${u.orderNumber}`,
                   u.productTitle || "N/A",
                   u.quantity.toString(),
                   `${formatPercent(u.discountPercent)} (${formatCurrency(u.discountAmount)})`,
-                  new Date(u.createdAt).toLocaleDateString(),
+                  new Date(u.createdAt).toLocaleDateString(locale === "en" ? "en-US" : locale),
                 ])}
               />
             )}
@@ -319,28 +321,25 @@ export default function Analytics() {
         <Card>
           <BlockStack gap="300">
             <Text variant="headingMd" as="h2">
-              Optimization Tips
+              {t.analyticsPage.optimizationTips}
             </Text>
             <BlockStack gap="200">
               <InlineStack gap="200">
-                <Badge tone="info">Tip</Badge>
+                <Badge tone="info">{t.analyticsPage.tip}</Badge>
                 <Text as="p">
-                  Products with high discount usage but low revenue might need
-                  adjusted tier thresholds.
+                  {t.analyticsPage.tip1}
                 </Text>
               </InlineStack>
               <InlineStack gap="200">
-                <Badge tone="info">Tip</Badge>
+                <Badge tone="info">{t.analyticsPage.tip}</Badge>
                 <Text as="p">
-                  If average discount is below 10%, consider adding more
-                  aggressive tiers to boost conversions.
+                  {t.analyticsPage.tip2}
                 </Text>
               </InlineStack>
               <InlineStack gap="200">
-                <Badge tone="info">Tip</Badge>
+                <Badge tone="info">{t.analyticsPage.tip}</Badge>
                 <Text as="p">
-                  Use countdown timers on your best-performing products to
-                  create urgency.
+                  {t.analyticsPage.tip3}
                 </Text>
               </InlineStack>
             </BlockStack>

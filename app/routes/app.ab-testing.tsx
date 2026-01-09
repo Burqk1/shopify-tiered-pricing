@@ -45,8 +45,9 @@ import {
 import { useState, useCallback } from "react";
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getABTestsByShop, getABTestStats, createABTest, updateABTestStatus, deleteABTest, selectWinner } from "~/models/ab-test.server";
+import { getTranslations } from "~/i18n";
 import type { ABTestType, ABTargetType } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -57,14 +58,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     throw new Response("Shop not found", { status: 404 });
   }
 
-  const [tests, stats] = await Promise.all([
+  const [tests, stats, localeSettings] = await Promise.all([
     getABTestsByShop(shop.id),
     getABTestStats(shop.id),
+    getLocaleSettings(session.shop),
   ]);
+
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
 
   return json({
     tests,
     stats,
+    t,
+    locale,
   });
 };
 
@@ -145,7 +152,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function ABTestingPage() {
-  const { tests, stats } = useLoaderData<typeof loader>();
+  const { tests, stats, t, locale } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
   const isLoading = navigation.state !== "idle";
@@ -163,18 +170,18 @@ export default function ABTestingPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "RUNNING":
-        return <Badge tone="success">Running</Badge>;
+        return <Badge tone="success">{t.abTestingPage.running}</Badge>;
       case "PAUSED":
-        return <Badge tone="attention">Paused</Badge>;
+        return <Badge tone="attention">{t.abTestingPage.paused}</Badge>;
       case "COMPLETED":
-        return <Badge tone="info">Completed</Badge>;
+        return <Badge tone="info">{t.abTestingPage.completed}</Badge>;
       default:
-        return <Badge>Draft</Badge>;
+        return <Badge>{t.abTestingPage.draft}</Badge>;
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale === "en" ? "en-US" : locale, {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
@@ -189,10 +196,10 @@ export default function ABTestingPage() {
 
   return (
     <Page
-      title="A/B Testing"
-      subtitle="Test prices, discounts, and offers to maximize conversions"
+      title={t.abTestingPage.title}
+      subtitle={t.abTestingPage.subtitle}
       primaryAction={{
-        content: "Create Test",
+        content: t.abTestingPage.createTest,
         icon: PlusIcon,
         onAction: () => setShowCreateModal(true),
       }}
@@ -204,11 +211,11 @@ export default function ABTestingPage() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodyMd" as="span" tone="subdued">Active Tests</Text>
+                  <Text variant="bodyMd" as="span" tone="subdued">{t.abTestingPage.activeTests}</Text>
                   <Icon source={TargetIcon} tone="base" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3">{stats.activeTests}</Text>
-                <Text variant="bodySm" as="p" tone="subdued">Running experiments</Text>
+                <Text variant="bodySm" as="p" tone="subdued">{t.abTestingPage.runningExperiments}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -217,13 +224,13 @@ export default function ABTestingPage() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodyMd" as="span" tone="subdued">Revenue Lift</Text>
+                  <Text variant="bodyMd" as="span" tone="subdued">{t.abTestingPage.revenueLift}</Text>
                   <Icon source={CashDollarIcon} tone="success" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3" tone="success">
                   +{formatCurrency(stats.totalRevenueLift)}
                 </Text>
-                <Text variant="bodySm" as="p" tone="subdued">From winning variants</Text>
+                <Text variant="bodySm" as="p" tone="subdued">{t.abTestingPage.fromWinningVariants}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -232,13 +239,13 @@ export default function ABTestingPage() {
             <Card>
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text variant="bodyMd" as="span" tone="subdued">Avg. Conversion Lift</Text>
+                  <Text variant="bodyMd" as="span" tone="subdued">{t.abTestingPage.avgConversionLift}</Text>
                   <Icon source={ChartVerticalFilledIcon} tone="success" />
                 </InlineStack>
                 <Text variant="headingXl" as="h3" tone="success">
                   +{stats.avgConversionLift}%
                 </Text>
-                <Text variant="bodySm" as="p" tone="subdued">vs. control groups</Text>
+                <Text variant="bodySm" as="p" tone="subdued">{t.abTestingPage.vsControlGroups}</Text>
               </BlockStack>
             </Card>
           </Layout.Section>
@@ -248,16 +255,15 @@ export default function ABTestingPage() {
         {tests.length === 0 ? (
           <Card>
             <EmptyState
-              heading="Start optimizing with A/B tests"
+              heading={t.abTestingPage.startOptimizing}
               action={{
-                content: "Create your first test",
+                content: t.abTestingPage.createFirstTest,
                 onAction: () => setShowCreateModal(true),
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
               <p>
-                Test different prices, discounts, and shipping thresholds to find
-                what converts best for your store.
+                {t.abTestingPage.emptyStateDesc}
               </p>
             </EmptyState>
           </Card>
@@ -274,23 +280,23 @@ export default function ABTestingPage() {
                         <Text variant="headingMd" as="h3">{test.name}</Text>
                         {getStatusBadge(test.status)}
                         {("winnerVariantId" in test && test.winnerVariantId) && (
-                          <Badge tone="success" icon={CheckIcon}>Winner Selected</Badge>
+                          <Badge tone="success" icon={CheckIcon}>{t.abTestingPage.winnerSelected}</Badge>
                         )}
                       </InlineStack>
                       <Text variant="bodySm" as="p" tone="subdued">
-                        {test.testType} test • {test.splitPercent}% traffic split • Started {test.startDate}
+                        {test.testType} {t.abTestingPage.test} • {test.splitPercent}% {t.abTestingPage.trafficSplit} • {t.abTestingPage.started} {test.startDate}
                       </Text>
                     </BlockStack>
                   </InlineStack>
                   <InlineStack gap="200">
                     {test.status === "RUNNING" && (
-                      <Button icon={StopCircleIcon} onClick={() => {}}>Pause</Button>
+                      <Button icon={StopCircleIcon} onClick={() => {}}>{t.abTestingPage.pause}</Button>
                     )}
                     {test.status === "PAUSED" && (
-                      <Button icon={PlayCircleIcon} onClick={() => {}}>Resume</Button>
+                      <Button icon={PlayCircleIcon} onClick={() => {}}>{t.abTestingPage.resume}</Button>
                     )}
                     {test.status === "RUNNING" && (
-                      <Button variant="primary" onClick={() => {}}>End Test & Pick Winner</Button>
+                      <Button variant="primary" onClick={() => {}}>{t.abTestingPage.endTestPickWinner}</Button>
                     )}
                   </InlineStack>
                 </InlineStack>
@@ -324,16 +330,16 @@ export default function ABTestingPage() {
                             <InlineStack gap="200" blockAlign="center">
                               <Text variant="headingSm" as="h4">{variant.name}</Text>
                               {variant.isControl && (
-                                <Badge>Control</Badge>
+                                <Badge>{t.abTestingPage.control}</Badge>
                               )}
                               {isWinner && (
-                                <Badge tone="success" icon={CheckIcon}>Winner</Badge>
+                                <Badge tone="success" icon={CheckIcon}>{t.abTestingPage.winner}</Badge>
                               )}
                             </InlineStack>
                             {!variant.isControl && significance && (
-                              <Tooltip content={`${significance.confidence}% confidence`}>
+                              <Tooltip content={`${significance.confidence}% ${t.abTestingPage.confidence}`}>
                                 <Badge tone={significance.lift > 0 ? "success" : "critical"}>
-                                  {`${significance.lift > 0 ? "+" : ""}${significance.lift.toFixed(1)}% lift`}
+                                  {`${significance.lift > 0 ? "+" : ""}${significance.lift.toFixed(1)}% ${t.abTestingPage.lift}`}
                                 </Badge>
                               </Tooltip>
                             )}
@@ -344,7 +350,7 @@ export default function ABTestingPage() {
                             <BlockStack gap="100">
                               <InlineStack gap="100" blockAlign="center">
                                 <Icon source={ViewIcon} tone="subdued" />
-                                <Text variant="bodySm" as="span" tone="subdued">Views</Text>
+                                <Text variant="bodySm" as="span" tone="subdued">{t.abTestingPage.views}</Text>
                               </InlineStack>
                               <Text variant="headingMd" as="p">{variant.views.toLocaleString()}</Text>
                             </BlockStack>
@@ -352,7 +358,7 @@ export default function ABTestingPage() {
                             <BlockStack gap="100">
                               <InlineStack gap="100" blockAlign="center">
                                 <Icon source={CartIcon} tone="subdued" />
-                                <Text variant="bodySm" as="span" tone="subdued">Add to Cart</Text>
+                                <Text variant="bodySm" as="span" tone="subdued">{t.abTestingPage.addToCart}</Text>
                               </InlineStack>
                               <Text variant="headingMd" as="p">{variant.addToCarts}</Text>
                             </BlockStack>
@@ -360,7 +366,7 @@ export default function ABTestingPage() {
                             <BlockStack gap="100">
                               <InlineStack gap="100" blockAlign="center">
                                 <Icon source={CheckIcon} tone="subdued" />
-                                <Text variant="bodySm" as="span" tone="subdued">Purchases</Text>
+                                <Text variant="bodySm" as="span" tone="subdued">{t.abTestingPage.purchases}</Text>
                               </InlineStack>
                               <Text variant="headingMd" as="p">{variant.purchases}</Text>
                             </BlockStack>
@@ -368,7 +374,7 @@ export default function ABTestingPage() {
                             <BlockStack gap="100">
                               <InlineStack gap="100" blockAlign="center">
                                 <Icon source={CashDollarIcon} tone="subdued" />
-                                <Text variant="bodySm" as="span" tone="subdued">Revenue</Text>
+                                <Text variant="bodySm" as="span" tone="subdued">{t.abTestingPage.revenue}</Text>
                               </InlineStack>
                               <Text variant="headingMd" as="p">{formatCurrency(variant.revenue)}</Text>
                             </BlockStack>
@@ -377,7 +383,7 @@ export default function ABTestingPage() {
                           {/* Conversion Rate */}
                           <BlockStack gap="200">
                             <InlineStack align="space-between">
-                              <Text variant="bodySm" as="span" tone="subdued">Conversion Rate</Text>
+                              <Text variant="bodySm" as="span" tone="subdued">{t.abTestingPage.conversionRate}</Text>
                               <Text variant="bodySm" as="span" fontWeight="semibold">
                                 {variant.conversionRate}%
                               </Text>
@@ -398,8 +404,7 @@ export default function ABTestingPage() {
                 {test.status === "RUNNING" && (
                   <Banner>
                     <p>
-                      <strong>Tip:</strong> Let tests run for at least 2 weeks or until you have 1,000+ visitors
-                      per variant for statistically significant results.
+                      <strong>{t.abTestingPage.tip}:</strong> {t.abTestingPage.statisticalTip}
                     </p>
                   </Banner>
                 )}
@@ -412,9 +417,9 @@ export default function ABTestingPage() {
         <Modal
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          title="Create A/B Test"
+          title={t.abTestingPage.createABTest}
           primaryAction={{
-            content: "Create Test",
+            content: t.abTestingPage.createTest,
             onAction: () => {
               // Submit form
               setShowCreateModal(false);
@@ -422,7 +427,7 @@ export default function ABTestingPage() {
           }}
           secondaryActions={[
             {
-              content: "Cancel",
+              content: t.abTestingPage.cancel,
               onAction: () => setShowCreateModal(false),
             },
           ]}
@@ -431,34 +436,34 @@ export default function ABTestingPage() {
           <Modal.Section>
             <BlockStack gap="400">
               <TextField
-                label="Test Name"
+                label={t.abTestingPage.testName}
                 value={newTest.name}
                 onChange={(value) => setNewTest({ ...newTest, name: value })}
-                placeholder="e.g., Summer Sale: 10% vs 15%"
+                placeholder={t.abTestingPage.testNamePlaceholder}
                 autoComplete="off"
-                helpText="A descriptive name to identify this test"
+                helpText={t.abTestingPage.testNameHelp}
               />
 
               <Select
-                label="Test Type"
+                label={t.abTestingPage.testType}
                 options={[
-                  { label: "Discount Percentage", value: "DISCOUNT" },
-                  { label: "Fixed Price", value: "PRICE" },
-                  { label: "Free Shipping Threshold", value: "SHIPPING" },
-                  { label: "Bundle Discount", value: "BUNDLE" },
+                  { label: t.abTestingPage.discountPercentage, value: "DISCOUNT" },
+                  { label: t.abTestingPage.fixedPrice, value: "PRICE" },
+                  { label: t.abTestingPage.freeShippingThreshold, value: "SHIPPING" },
+                  { label: t.abTestingPage.bundleDiscount, value: "BUNDLE" },
                 ]}
                 value={newTest.testType}
                 onChange={(value) => setNewTest({ ...newTest, testType: value })}
               />
 
               <Select
-                label="Target Audience"
+                label={t.abTestingPage.targetAudience}
                 options={[
-                  { label: "All Visitors", value: "ALL_VISITORS" },
-                  { label: "New Visitors Only", value: "NEW_VISITORS" },
-                  { label: "Returning Visitors Only", value: "RETURNING_VISITORS" },
-                  { label: "Specific Products", value: "SPECIFIC_PRODUCTS" },
-                  { label: "Specific Collections", value: "SPECIFIC_COLLECTIONS" },
+                  { label: t.abTestingPage.allVisitors, value: "ALL_VISITORS" },
+                  { label: t.abTestingPage.newVisitorsOnly, value: "NEW_VISITORS" },
+                  { label: t.abTestingPage.returningVisitorsOnly, value: "RETURNING_VISITORS" },
+                  { label: t.abTestingPage.specificProducts, value: "SPECIFIC_PRODUCTS" },
+                  { label: t.abTestingPage.specificCollections, value: "SPECIFIC_COLLECTIONS" },
                 ]}
                 value={newTest.targetType}
                 onChange={(value) => setNewTest({ ...newTest, targetType: value })}
@@ -466,34 +471,34 @@ export default function ABTestingPage() {
 
               <Divider />
 
-              <Text variant="headingSm" as="h3">Variants</Text>
+              <Text variant="headingSm" as="h3">{t.abTestingPage.variants}</Text>
 
               <FormLayout>
                 <FormLayout.Group>
                   <TextField
-                    label="Control (A)"
+                    label={t.abTestingPage.controlA}
                     value={newTest.controlValue}
                     onChange={(value) => setNewTest({ ...newTest, controlValue: value })}
                     placeholder={newTest.testType === "DISCOUNT" ? "10" : "99.00"}
                     suffix={newTest.testType === "DISCOUNT" ? "%" : "$"}
                     autoComplete="off"
-                    helpText="Current/original value"
+                    helpText={t.abTestingPage.currentOriginalValue}
                   />
                   <TextField
-                    label="Variant (B)"
+                    label={t.abTestingPage.variantB}
                     value={newTest.variantValue}
                     onChange={(value) => setNewTest({ ...newTest, variantValue: value })}
                     placeholder={newTest.testType === "DISCOUNT" ? "15" : "89.00"}
                     suffix={newTest.testType === "DISCOUNT" ? "%" : "$"}
                     autoComplete="off"
-                    helpText="New value to test"
+                    helpText={t.abTestingPage.newValueToTest}
                   />
                 </FormLayout.Group>
               </FormLayout>
 
               <BlockStack gap="200">
                 <InlineStack align="space-between">
-                  <Text as="span" variant="bodyMd">Traffic Split</Text>
+                  <Text as="span" variant="bodyMd">{t.abTestingPage.trafficSplitLabel}</Text>
                   <Text as="span" variant="bodyMd" fontWeight="semibold">
                     {newTest.splitPercent}% / {100 - newTest.splitPercent}%
                   </Text>
@@ -508,14 +513,13 @@ export default function ABTestingPage() {
                   step={5}
                 />
                 <Text as="span" variant="bodySm" tone="subdued">
-                  Control: {newTest.splitPercent}% of visitors • Variant B: {100 - newTest.splitPercent}% of visitors
+                  {t.abTestingPage.controlPercent}: {newTest.splitPercent}% {t.abTestingPage.ofVisitors} • {t.abTestingPage.variantPercent}: {100 - newTest.splitPercent}% {t.abTestingPage.ofVisitors}
                 </Text>
               </BlockStack>
 
               <Banner tone="info">
                 <p>
-                  We recommend a 50/50 split for fastest results. The test will automatically
-                  track views, add-to-carts, and purchases for each variant.
+                  {t.abTestingPage.splitRecommendation}
                 </p>
               </Banner>
             </BlockStack>

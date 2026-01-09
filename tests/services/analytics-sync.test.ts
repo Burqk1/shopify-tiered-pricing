@@ -36,7 +36,7 @@ describe("Analytics Sync Service", () => {
         revenue: 800,
         conversionRate: 0.0533,
         inventoryLevel: 45,
-        dataSource: "ESTIMATED",
+        dataSource: "ESTIMATED" as const,
       };
 
       vi.mocked(prisma.productAnalyticsHistory.upsert).mockResolvedValue(analyticsRecord as never);
@@ -49,8 +49,8 @@ describe("Analytics Sync Service", () => {
             date: new Date("2024-01-15"),
           },
         },
-        update: analyticsRecord,
-        create: analyticsRecord,
+        update: analyticsRecord as never,
+        create: analyticsRecord as never,
       });
 
       expect(result.pageViews).toBe(150);

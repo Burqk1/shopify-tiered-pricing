@@ -15,6 +15,7 @@ vi.mock("~/shopify.server", () => ({
 
 vi.mock("~/models/shop.server", () => ({
   getShopByDomain: vi.fn(),
+  getLocaleSettings: vi.fn(),
 }));
 
 vi.mock("~/models/analytics.server", () => ({
@@ -33,10 +34,11 @@ vi.mock("@remix-run/react", async () => {
 });
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getAnalyticsSummary } from "~/models/analytics.server";
 import { loader } from "~/routes/app.analytics";
 import Analytics from "~/routes/app.analytics";
+import { mockTranslations, mockLocaleSettings } from "../helpers/mock-translations";
 
 const renderWithPolaris = (component: React.ReactElement) => {
   return render(<PolarisTestProvider>{component}</PolarisTestProvider>);
@@ -45,6 +47,7 @@ const renderWithPolaris = (component: React.ReactElement) => {
 describe("Analytics Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLocaleSettings).mockResolvedValue(mockLocaleSettings);
     mockLoaderData = {
       analytics: {
         summary: {
@@ -81,6 +84,7 @@ describe("Analytics Route", () => {
       },
       days: 30,
       currency: "USD",
+      t: mockTranslations,
     };
   });
 
@@ -100,11 +104,14 @@ describe("Analytics Route", () => {
       } as never);
 
       vi.mocked(getAnalyticsSummary).mockResolvedValue({
+        period: { days: 30, startDate: new Date(), endDate: new Date() },
         summary: {
           totalOrders: 100,
           totalRevenue: 10000,
           totalDiscount: 1500,
+          totalOriginal: 11500,
           averageDiscount: 15,
+          conversionLift: 5,
         },
         dailyStats: [],
         byTier: [],
@@ -132,7 +139,8 @@ describe("Analytics Route", () => {
       } as never);
 
       vi.mocked(getAnalyticsSummary).mockResolvedValue({
-        summary: { totalOrders: 50, totalRevenue: 5000, totalDiscount: 750, averageDiscount: 15 },
+        period: { days: 7, startDate: new Date(), endDate: new Date() },
+        summary: { totalOrders: 50, totalRevenue: 5000, totalDiscount: 750, totalOriginal: 5750, averageDiscount: 15, conversionLift: 3 },
         dailyStats: [],
         byTier: [],
         byRule: [],
@@ -181,9 +189,9 @@ describe("Analytics Route", () => {
     it("should render summary cards", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Total Orders with Discount")).toBeInTheDocument();
-      expect(screen.getByText("Revenue from Discounted Orders")).toBeInTheDocument();
-      expect(screen.getByText("Average Discount")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.totalOrders)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.revenue)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.avgDiscount)).toBeInTheDocument();
     });
 
     it("should display summary values", () => {
@@ -197,43 +205,44 @@ describe("Analytics Route", () => {
     it("should display total discount saved", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("$1,875.00 saved by customers")).toBeInTheDocument();
+      expect(screen.getByText(/\$1,875\.00/)).toBeInTheDocument();
+      expect(screen.getByText(new RegExp(mockTranslations.analyticsPage.savedByCustomers))).toBeInTheDocument();
     });
 
     it("should render daily revenue trend section", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Daily Revenue Trend")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.dailyTrend)).toBeInTheDocument();
     });
 
     it("should render performance by tier section", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Performance by Tier")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.byTier)).toBeInTheDocument();
     });
 
     it("should render performance by rule section", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Performance by Rule")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.byRule)).toBeInTheDocument();
     });
 
     it("should render top products section", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Top Products by Discount Revenue")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.topProducts)).toBeInTheDocument();
     });
 
     it("should render recent activity section", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Recent Discount Usage")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.recentActivity)).toBeInTheDocument();
     });
 
     it("should render optimization tips", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("Optimization Tips")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.tips)).toBeInTheDocument();
     });
 
     it("should show empty state for daily stats when no data", () => {
@@ -248,11 +257,12 @@ describe("Analytics Route", () => {
         },
         days: 30,
         currency: "USD",
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText(/No discount usage data yet/)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.noData)).toBeInTheDocument();
     });
 
     it("should show empty state for tier data when no data", () => {
@@ -267,11 +277,12 @@ describe("Analytics Route", () => {
         },
         days: 30,
         currency: "USD",
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("No tier data yet")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.noTierData)).toBeInTheDocument();
     });
 
     it("should show empty state for rule data when no data", () => {
@@ -286,11 +297,12 @@ describe("Analytics Route", () => {
         },
         days: 30,
         currency: "USD",
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText("No rule data yet")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.noRuleData)).toBeInTheDocument();
     });
 
     it("should show empty state for products when no data", () => {
@@ -305,11 +317,12 @@ describe("Analytics Route", () => {
         },
         days: 30,
         currency: "USD",
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText(/No product data yet/)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.noProductData)).toBeInTheDocument();
     });
 
     it("should show empty state for recent activity when no data", () => {
@@ -324,11 +337,12 @@ describe("Analytics Route", () => {
         },
         days: 30,
         currency: "USD",
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getByText(/No recent activity/)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.analyticsPage.noRecentActivity)).toBeInTheDocument();
     });
 
     it("should display tier data in table", () => {
@@ -354,8 +368,8 @@ describe("Analytics Route", () => {
     it("should have export buttons", () => {
       renderWithPolaris(<Analytics />);
 
-      expect(screen.getAllByText("Export Detailed CSV").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Export Summary CSV").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(mockTranslations.analyticsPage.exportDetailed).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(mockTranslations.analyticsPage.exportSummary).length).toBeGreaterThan(0);
     });
 
     it("should render daily stats bars", () => {

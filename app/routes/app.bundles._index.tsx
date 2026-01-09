@@ -22,8 +22,9 @@ import { PlusIcon, ImageIcon } from "@shopify/polaris-icons";
 
 import { authenticate } from "~/shopify.server";
 import { DeleteConfirmModal } from "~/components/DeleteConfirmModal";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getBundlesByShop, updateBundleStatus, deleteBundle } from "~/models/bundle.server";
+import { getTranslations } from "~/i18n";
 import type { RuleStatus } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -36,6 +37,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const bundles = await getBundlesByShop(shop.id);
 
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
   return json({
     bundles: bundles.map((b) => ({
       id: b.id,
@@ -47,6 +52,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       products: b.products.map((p) => p.productTitle || "Product").slice(0, 3),
       requireAll: b.requireAll,
     })),
+    t,
   });
 };
 
@@ -73,7 +79,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function BundlesList() {
-  const { bundles } = useLoaderData<typeof loader>();
+  const { bundles, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const submit = useSubmit();
 
@@ -100,17 +106,17 @@ export default function BundlesList() {
 
   const getStatusBadge = (status: string) => {
     const config: Record<string, { tone: "info" | "success" | "warning" | "critical"; label: string }> = {
-      DRAFT: { tone: "info", label: "Draft" },
-      ACTIVE: { tone: "success", label: "Active" },
-      PAUSED: { tone: "warning", label: "Paused" },
-      ARCHIVED: { tone: "critical", label: "Archived" },
+      DRAFT: { tone: "info", label: t.bundlesPage.draftStatus },
+      ACTIVE: { tone: "success", label: t.bundlesPage.activeStatus },
+      PAUSED: { tone: "warning", label: t.bundlesPage.pausedStatus },
+      ARCHIVED: { tone: "critical", label: t.bundlesPage.archivedStatus },
     };
     const c = config[status] || config.DRAFT;
     return <Badge tone={c.tone}>{c.label}</Badge>;
   };
 
   const formatDiscount = (type: string, value: number) => {
-    return type === "PERCENTAGE" ? `${value}% off` : `$${value} off`;
+    return type === "PERCENTAGE" ? `${value}% ${t.bundlesPage.off}` : `$${value} ${t.bundlesPage.off}`;
   };
 
   const rowMarkup = bundles.map((bundle, index) => (
@@ -131,15 +137,15 @@ export default function BundlesList() {
         <Badge tone="success">{formatDiscount(bundle.discountType, bundle.discountValue)}</Badge>
       </IndexTable.Cell>
       <IndexTable.Cell>
-        {bundle.productCount} products
+        {bundle.productCount} {t.bundlesPage.products}
         <Text variant="bodySm" tone="subdued" as="p">
-          {bundle.requireAll ? "Must buy all" : "Mix & match"}
+          {bundle.requireAll ? t.bundlesPage.mustBuyAll : t.bundlesPage.mixMatch}
         </Text>
       </IndexTable.Cell>
       <IndexTable.Cell>
         <InlineStack gap="200">
           <Button size="slim" onClick={() => navigate(`/app/bundles/${bundle.id}`)}>
-            Edit
+            {t.bundlesPage.edit}
           </Button>
           {bundle.status === "DRAFT" && (
             <Button
@@ -147,16 +153,16 @@ export default function BundlesList() {
               tone="success"
               onClick={() => handleStatusChange(bundle.id, "ACTIVE")}
             >
-              Activate
+              {t.bundlesPage.activate}
             </Button>
           )}
           {bundle.status === "ACTIVE" && (
             <Button size="slim" onClick={() => handleStatusChange(bundle.id, "PAUSED")}>
-              Pause
+              {t.bundlesPage.pause}
             </Button>
           )}
           <Button size="slim" tone="critical" onClick={() => openDeleteModal({ id: bundle.id, name: bundle.name })}>
-            Delete
+            {t.bundlesPage.delete}
           </Button>
         </InlineStack>
       </IndexTable.Cell>
@@ -165,11 +171,11 @@ export default function BundlesList() {
 
   return (
     <Page
-      title="Bundle Discounts"
-      subtitle="Create product bundles with special discounts"
-      backAction={{ content: "Home", url: "/app" }}
+      title={t.bundlesPage.title}
+      subtitle={t.bundlesPage.subtitle}
+      backAction={{ content: t.bundlesPage.backToHome, url: "/app" }}
       primaryAction={{
-        content: "Create Bundle",
+        content: t.bundlesPage.createBundle,
         icon: PlusIcon,
         onAction: () => navigate("/app/bundles/new"),
       }}
@@ -177,28 +183,27 @@ export default function BundlesList() {
       <Card padding="0">
         {bundles.length === 0 ? (
           <EmptyState
-            heading="Create your first product bundle"
+            heading={t.bundlesPage.createFirstBundle}
             action={{
-              content: "Create Bundle",
+              content: t.bundlesPage.createBundle,
               onAction: () => navigate("/app/bundles/new"),
             }}
             image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
           >
             <p>
-              Bundle products together and offer a special discount. "Buy shirt
-              + pants + belt, get 25% off!"
+              {t.bundlesPage.emptyStateDesc}
             </p>
           </EmptyState>
         ) : (
           <IndexTable
-            resourceName={{ singular: "bundle", plural: "bundles" }}
+            resourceName={{ singular: t.bundlesPage.bundle, plural: t.bundlesPage.bundles }}
             itemCount={bundles.length}
             headings={[
-              { title: "Bundle" },
-              { title: "Status" },
-              { title: "Discount" },
-              { title: "Products" },
-              { title: "Actions" },
+              { title: t.bundlesPage.bundle },
+              { title: t.bundlesPage.status },
+              { title: t.bundlesPage.discount },
+              { title: t.bundlesPage.products },
+              { title: t.bundlesPage.actions },
             ]}
             selectable={false}
           >

@@ -30,7 +30,8 @@ import {
 } from "@shopify/polaris-icons";
 
 import { authenticate } from "~/shopify.server";
-import { getShopWithRules } from "~/models/shop.server";
+import { getShopWithRules, getLocaleSettings } from "~/models/shop.server";
+import { getTranslations } from "~/i18n";
 
 interface SetupStep {
   id: string;
@@ -54,42 +55,47 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // We can't easily check if theme extension is added, so we'll assume step 2
   // is completed if they have active rules (they would need the extension for it to work)
 
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
   return json({
     shopDomain: session.shop,
     hasRules: hasRules ?? false,
     hasActiveRules: hasActiveRules ?? false,
     ruleCount: shopData?.rules.length || 0,
+    t,
   });
 };
 
 export default function SetupWizard() {
-  const { shopDomain, hasRules, hasActiveRules, ruleCount } = useLoaderData<typeof loader>();
+  const { shopDomain, hasRules, hasActiveRules, ruleCount, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
 
   const steps: SetupStep[] = [
     {
       id: "create-rule",
-      title: "Create Your First Pricing Rule",
-      description: "Set up volume discounts like 'Buy 5+, get 10% off'. Define which products and what discount tiers to offer.",
-      actionLabel: hasRules ? "Create Another Rule" : "Create Rule",
+      title: t.setupPage.step1Title,
+      description: t.setupPage.step1Desc,
+      actionLabel: hasRules ? t.setupPage.step1ActionExisting : t.setupPage.step1ActionNew,
       actionUrl: "/app/rules/new",
       completed: hasRules,
       icon: ListBulletedIcon,
     },
     {
       id: "add-to-theme",
-      title: "Add Discount Table to Your Theme",
-      description: "Display the pricing table on product pages so customers can see available discounts before adding to cart.",
-      actionLabel: "Open Theme Editor",
+      title: t.setupPage.step2Title,
+      description: t.setupPage.step2Desc,
+      actionLabel: t.setupPage.step2Action,
       actionUrl: `https://${shopDomain}/admin/themes/current/editor`,
       completed: hasActiveRules, // Assuming if they have active rules, they've set up theme
       icon: ThemeIcon,
     },
     {
       id: "activate-discount",
-      title: "Activate Automatic Discount",
-      description: "Connect your pricing rule to Shopify's checkout so discounts apply automatically when customers buy in quantity.",
-      actionLabel: "Create Discount",
+      title: t.setupPage.step3Title,
+      description: t.setupPage.step3Desc,
+      actionLabel: t.setupPage.step3Action,
       actionUrl: "/app/discount/new",
       completed: false, // Would need to check Shopify discounts
       icon: DiscountIcon,
@@ -101,9 +107,9 @@ export default function SetupWizard() {
 
   return (
     <Page
-      title="Setup Guide"
-      subtitle="Get started with Tiered Pricing in 3 easy steps"
-      backAction={{ content: "Dashboard", url: "/app" }}
+      title={t.setupPage.title}
+      subtitle={t.setupPage.subtitle}
+      backAction={{ content: t.setupPage.dashboard, url: "/app" }}
     >
       <BlockStack gap="500">
         {/* Progress */}
@@ -111,10 +117,10 @@ export default function SetupWizard() {
           <BlockStack gap="300">
             <InlineStack align="space-between">
               <Text variant="headingSm" as="h3">
-                Setup Progress
+                {t.setupPage.setupProgress}
               </Text>
               <Text variant="bodySm" tone="subdued" as="span">
-                {completedCount} of {steps.length} completed
+                {completedCount} {t.setupPage.of} {steps.length} {t.setupPage.completed}
               </Text>
             </InlineStack>
             <ProgressBar progress={progress} tone="primary" size="small" />
@@ -150,7 +156,7 @@ export default function SetupWizard() {
                       {step.title}
                     </Text>
                     {step.completed && (
-                      <Badge tone="success">Completed</Badge>
+                      <Badge tone="success">{t.setupPage.completedBadge}</Badge>
                     )}
                   </InlineStack>
                   <Text variant="bodyMd" tone="subdued" as="p">
@@ -180,29 +186,29 @@ export default function SetupWizard() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h3">
-              How to Add the Discount Table to Your Theme
+              {t.setupPage.themeInstructions}
             </Text>
             <BlockStack gap="200">
               <Text as="p">
-                <strong>Step 1:</strong> Go to your Shopify Admin → Online Store → Themes
+                <strong>Step 1:</strong> {t.setupPage.themeStep1}
               </Text>
               <Text as="p">
-                <strong>Step 2:</strong> Click "Customize" on your active theme
+                <strong>Step 2:</strong> {t.setupPage.themeStep2}
               </Text>
               <Text as="p">
-                <strong>Step 3:</strong> Navigate to a Product page template
+                <strong>Step 3:</strong> {t.setupPage.themeStep3}
               </Text>
               <Text as="p">
-                <strong>Step 4:</strong> Click "Add block" or "Add section"
+                <strong>Step 4:</strong> {t.setupPage.themeStep4}
               </Text>
               <Text as="p">
-                <strong>Step 5:</strong> Look for "Apps" → "Volume Discount Table"
+                <strong>Step 5:</strong> {t.setupPage.themeStep5}
               </Text>
               <Text as="p">
-                <strong>Step 6:</strong> Drag it to your desired position and customize colors
+                <strong>Step 6:</strong> {t.setupPage.themeStep6}
               </Text>
               <Text as="p">
-                <strong>Step 7:</strong> Save your changes
+                <strong>Step 7:</strong> {t.setupPage.themeStep7}
               </Text>
             </BlockStack>
             <Button
@@ -210,20 +216,19 @@ export default function SetupWizard() {
               url={`https://${shopDomain}/admin/themes/current/editor`}
               external
             >
-              Open Theme Editor
+              {t.setupPage.openThemeEditor}
             </Button>
           </BlockStack>
         </Card>
 
         {/* Help Banner */}
         <Banner
-          title="Need help?"
-          action={{ content: "View Documentation", url: "/app/help" }}
+          title={t.setupPage.needHelp}
+          action={{ content: t.setupPage.viewDocumentation, url: "/app/help" }}
           tone="info"
         >
           <p>
-            Check our documentation for detailed guides, video tutorials, and
-            troubleshooting tips.
+            {t.setupPage.needHelpDesc}
           </p>
         </Banner>
       </BlockStack>

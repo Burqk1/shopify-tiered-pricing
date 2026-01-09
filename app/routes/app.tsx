@@ -24,6 +24,10 @@ import {
   AutomationIcon,
   TargetIcon,
   OrderIcon,
+  GiftCardIcon,
+  CartIcon,
+  GlobeIcon,
+  ImportIcon,
 } from "@shopify/polaris-icons";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
@@ -110,6 +114,24 @@ export default function App() {
             selected: isNavItemSelected(path, "/app/bundles"),
           },
           {
+            label: t.nav.bogo || "BOGO",
+            icon: GiftCardIcon,
+            onClick: () => navigate("/app/bogo"),
+            selected: isNavItemSelected(path, "/app/bogo"),
+          },
+          {
+            label: t.nav.cartProgress || "Cart Progress",
+            icon: CartIcon,
+            onClick: () => navigate("/app/cart-progress"),
+            selected: isNavItemSelected(path, "/app/cart-progress"),
+          },
+          {
+            label: t.nav.gifts || "Gifts",
+            icon: GiftCardIcon,
+            onClick: () => navigate("/app/gifts"),
+            selected: isNavItemSelected(path, "/app/gifts"),
+          },
+          {
             label: t.nav.timers,
             icon: ClockIcon,
             onClick: () => navigate("/app/timers"),
@@ -144,6 +166,18 @@ export default function App() {
             icon: ChartVerticalFilledIcon,
             onClick: () => navigate("/app/analytics"),
             selected: isNavItemSelected(path, "/app/analytics"),
+          },
+          {
+            label: t.nav.geoTargeting || "Geo Targeting",
+            icon: GlobeIcon,
+            onClick: () => navigate("/app/geo-targeting"),
+            selected: isNavItemSelected(path, "/app/geo-targeting"),
+          },
+          {
+            label: t.nav.importExport || "Import/Export",
+            icon: ImportIcon,
+            onClick: () => navigate("/app/import-export"),
+            selected: isNavItemSelected(path, "/app/import-export"),
           },
           {
             label: t.nav.settings,

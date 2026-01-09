@@ -18,6 +18,7 @@ vi.mock("~/models/shop.server", () => ({
   getPlanFeatures: vi.fn(),
   getPOSSettings: vi.fn(),
   updatePOSSettings: vi.fn(),
+  getLocaleSettings: vi.fn(),
 }));
 
 vi.mock("~/services/billing.server", () => ({
@@ -53,11 +54,12 @@ vi.mock("@remix-run/react", async () => {
 });
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain, getPlanFeatures, getPOSSettings, updatePOSSettings } from "~/models/shop.server";
+import { getShopByDomain, getPlanFeatures, getPOSSettings, updatePOSSettings, getLocaleSettings } from "~/models/shop.server";
 import { createSubscription, getSubscriptionStatus, cancelSubscription } from "~/services/billing.server";
 import { getSyncStats } from "~/models/sync-log.server";
 import { loader, action } from "~/routes/app.settings";
 import Settings from "~/routes/app.settings";
+import { mockTranslations, mockLocaleSettings } from "../helpers/mock-translations";
 
 const renderWithPolaris = (component: React.ReactElement) => {
   return render(<PolarisTestProvider>{component}</PolarisTestProvider>);
@@ -66,6 +68,7 @@ const renderWithPolaris = (component: React.ReactElement) => {
 describe("Settings Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLocaleSettings).mockResolvedValue(mockLocaleSettings);
     mockActionData = null;
     mockLoaderData = {
       shop: {
@@ -99,6 +102,17 @@ describe("Settings Route", () => {
         posShowTierInfo: true,
         posStaffOverride: false,
       },
+      localeSettings: mockLocaleSettings,
+      supportedLocales: [
+        { code: "en", name: "English", flag: "🇬🇧" },
+        { code: "tr", name: "Türkçe", flag: "🇹🇷" },
+      ],
+      featureAccess: {
+        aiPricing: true,
+        abTesting: true,
+        multiCurrency: true,
+      },
+      t: mockTranslations,
     };
   });
 
@@ -199,7 +213,7 @@ describe("Settings Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { confirmationUrl?: string };
 
       expect(data.confirmationUrl).toBe("https://shopify.com/billing/confirm");
       expect(createSubscription).toHaveBeenCalled();
@@ -238,7 +252,7 @@ describe("Settings Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean; message?: string };
 
       expect(data.success).toBe(true);
       expect(data.message).toBe("Subscription cancelled");
@@ -278,7 +292,7 @@ describe("Settings Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(updatePOSSettings).toHaveBeenCalledWith("test.myshopify.com", {

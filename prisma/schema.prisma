@@ -1058,3 +1058,350 @@ enum ElasticitySource {
   AB_TEST         // Learned from A/B test
   MANUAL          // Manually set
 }
+
+// ============================================================================
+// CART PROGRESS BAR - "Add $X more for free shipping" or discount progress
+// ============================================================================
+
+model CartProgressBar {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Free Shipping Progress"
+  status      RuleStatus    @default(DRAFT)
+
+  // Progress type
+  progressType    ProgressBarType   @default(FREE_SHIPPING)
+
+  // Threshold settings
+  threshold       Decimal     @db.Decimal(10, 2) // Target amount (e.g., $50 for free shipping)
+
+  // Reward on completion
+  rewardType      RewardType  @default(FREE_SHIPPING)
+  rewardValue     Decimal?    @db.Decimal(10, 2) // If discount reward
+  rewardProductId String?     // If free gift reward
+
+  // Display Settings
+  barStyle        String      @default("default") // "default" | "minimal" | "gradient" | "animated"
+  barColor        String      @default("#4CAF50")
+  bgColor         String      @default("#e0e0e0")
+  textColor       String      @default("#333333")
+
+  // Messages (supports {amount} placeholder)
+  emptyMessage    String      @default("Add {amount} to get free shipping!")
+  progressMessage String      @default("Only {amount} away from free shipping!")
+  completeMessage String      @default("You've unlocked free shipping!")
+
+  // Targeting
+  showOn          ProgressShowOn  @default(CART_PAGE)
+  countryFilter   String[]    // Empty = all countries
+  customerTags    String[]    // Empty = all customers
+
+  // Scheduling
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Analytics
+  impressions     Int         @default(0)
+  completions     Int         @default(0)
+  revenueGenerated Decimal    @db.Decimal(12, 2) @default(0)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([shopId, status])
+}
+
+enum ProgressBarType {
+  FREE_SHIPPING       // "Add $X more for free shipping"
+  DISCOUNT_UNLOCK     // "Add $X more for 10% off"
+  FREE_GIFT           // "Add $X more for a free gift"
+  TIERED_PROGRESS     // Multiple tiers (spend more, save more)
+}
+
+enum RewardType {
+  FREE_SHIPPING
+  PERCENTAGE_DISCOUNT
+  FIXED_DISCOUNT
+  FREE_GIFT
+}
+
+enum ProgressShowOn {
+  CART_PAGE
+  CART_DRAWER
+  PRODUCT_PAGES
+  ALL_PAGES
+  ANNOUNCEMENT_BAR
+}
+
+// ============================================================================
+// BOGO - Buy One Get One offers
+// ============================================================================
+
+model BogoOffer {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Buy 2 Get 1 Free"
+  description String?
+  status      RuleStatus    @default(DRAFT)
+
+  // BOGO Type
+  bogoType    BogoType      @default(BUY_X_GET_Y_FREE)
+
+  // Buy Condition
+  buyQuantity     Int       @default(1)   // "Buy X"
+  buyProductIds   String[]  // Specific products (empty = all)
+  buyCollectionIds String[] // From collections
+  buyMinAmount    Decimal?  @db.Decimal(10, 2) // Or min spend
+
+  // Get Reward
+  getQuantity     Int       @default(1)   // "Get Y"
+  getProductIds   String[]  // Free/discounted products (empty = same as buy)
+  getCollectionIds String[] // From collections
+
+  // Discount on "Get" items
+  discountType    DiscountType  @default(PERCENTAGE)
+  discountValue   Decimal       @db.Decimal(10, 2) @default(100) // 100% = free
+
+  // Limits
+  maxUsesPerOrder Int?      // Max times this can apply per order
+  maxUsesTotal    Int?      // Total uses limit
+  usesCount       Int       @default(0)
+
+  // Customer targeting
+  customerTags    String[]  // Empty = all customers
+  newCustomersOnly Boolean  @default(false)
+
+  // Scheduling
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Stacking rules
+  stackable       Boolean   @default(false) // Can combine with other discounts?
+  priority        Int       @default(0)     // Higher = applies first
+
+  // Analytics
+  ordersUsed      Int       @default(0)
+  totalDiscountGiven Decimal @db.Decimal(12, 2) @default(0)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([shopId, status])
+}
+
+enum BogoType {
+  BUY_X_GET_Y_FREE      // Buy 2 Get 1 Free
+  BUY_X_GET_Y_PERCENT   // Buy 2 Get 1 at 50% off
+  BUY_X_GET_Y_FIXED     // Buy 2 Get 1 for $5
+  SPEND_X_GET_Y         // Spend $100 Get free item
+}
+
+// ============================================================================
+// STACKABLE DISCOUNT RULES - Combine multiple offers
+// ============================================================================
+
+model StackableDiscount {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String
+  status      RuleStatus    @default(DRAFT)
+
+  // Stacking method
+  stackMethod     StackMethod   @default(BEST_DISCOUNT)
+  maxStackCount   Int           @default(2)   // Max discounts to combine
+
+  // Which discount types can stack
+  allowTiered     Boolean       @default(true)
+  allowBogo       Boolean       @default(true)
+  allowBundles    Boolean       @default(true)
+  allowCoupons    Boolean       @default(true)
+  allowAutomatic  Boolean       @default(true)
+
+  // Limits
+  maxTotalDiscount    Decimal?  @db.Decimal(5, 2)  // Max % off total
+  maxDiscountAmount   Decimal?  @db.Decimal(10, 2) // Max $ off
+  preserveMinMargin   Decimal?  @db.Decimal(5, 2)  // Never go below X% margin
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([shopId])
+  @@index([shopId])
+}
+
+enum StackMethod {
+  BEST_DISCOUNT     // Apply only the best discount
+  COMBINE_ALL       // Add all discounts together
+  SEQUENTIAL        // Apply discounts one after another (compounding)
+  CAPPED            // Combine up to a cap
+}
+
+// ============================================================================
+// GIFT WITH PURCHASE - Free gift when spending threshold met
+// ============================================================================
+
+model GiftWithPurchase {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "Free Tote Bag with $100+ Purchase"
+  status      RuleStatus    @default(DRAFT)
+
+  // Trigger condition
+  triggerType     GiftTriggerType   @default(MIN_SPEND)
+  triggerValue    Decimal           @db.Decimal(10, 2) // Min spend or quantity
+  triggerProductIds String[]        // If specific products required
+  triggerCollectionIds String[]     // If from specific collections
+
+  // Gift details
+  giftProductId   String            // Product to give free
+  giftVariantId   String?           // Specific variant
+  giftTitle       String?           // Display title override
+  giftQuantity    Int               @default(1)
+
+  // Discount on gift (usually 100% = free)
+  giftDiscountPercent Decimal       @db.Decimal(5, 2) @default(100)
+
+  // Display
+  showProgressBar Boolean           @default(true)
+  progressMessage String            @default("Spend {amount} more to get a FREE gift!")
+  claimedMessage  String            @default("FREE Gift Added!")
+  giftImageUrl    String?
+
+  // Limits
+  maxPerOrder     Int               @default(1)
+  maxTotal        Int?              // Total gifts to give out
+  givenCount      Int               @default(0)
+
+  // Targeting
+  customerTags    String[]
+  countryFilter   String[]
+  newCustomersOnly Boolean          @default(false)
+
+  // Scheduling
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Auto-add behavior
+  autoAddToCart   Boolean           @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([shopId, status])
+}
+
+enum GiftTriggerType {
+  MIN_SPEND           // Minimum cart total
+  MIN_QUANTITY        // Minimum items in cart
+  SPECIFIC_PRODUCT    // Buy specific product
+  SPECIFIC_COLLECTION // Buy from collection
+}
+
+// ============================================================================
+// GEO TARGETING - Country/region based pricing rules
+// ============================================================================
+
+model GeoRule {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  name        String        // e.g., "EU Pricing"
+  status      RuleStatus    @default(DRAFT)
+  priority    Int           @default(0)
+
+  // Geographic targeting
+  countries       String[]      // ISO country codes (US, GB, DE, etc.)
+  regions         String[]      // State/province codes (optional)
+  excludeCountries String[]     // Countries to exclude
+
+  // Pricing adjustment
+  adjustmentType  GeoAdjustmentType @default(PERCENTAGE)
+  adjustmentValue Decimal       @db.Decimal(10, 2)
+
+  // Apply to
+  applyTo         GeoApplyTo    @default(ALL_PRODUCTS)
+  productIds      String[]      // If specific products
+  collectionIds   String[]      // If specific collections
+
+  // Display
+  showOriginalPrice Boolean     @default(true)
+  pricePrefix       String?     // e.g., "From" or "Starting at"
+
+  // Currency override
+  displayCurrency   String?     // Show in different currency
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([shopId, status])
+  @@index([shopId, countries])
+}
+
+enum GeoAdjustmentType {
+  PERCENTAGE        // +/- X% from base price
+  FIXED_AMOUNT      // +/- $X from base price
+  FIXED_PRICE       // Set specific price
+  MULTIPLIER        // Multiply by X (e.g., 1.2 for 20% increase)
+}
+
+enum GeoApplyTo {
+  ALL_PRODUCTS
+  SPECIFIC_PRODUCTS
+  SPECIFIC_COLLECTIONS
+  EXCLUDE_SALE_ITEMS
+}
+
+// ============================================================================
+// IMPORT/EXPORT JOBS - Track CSV imports
+// ============================================================================
+
+model ImportJob {
+  id          String        @id @default(uuid())
+  shopId      String
+
+  // Job info
+  jobType     ImportJobType
+  status      ImportJobStatus   @default(PENDING)
+  fileName    String
+  fileSize    Int               // bytes
+
+  // Progress
+  totalRows       Int           @default(0)
+  processedRows   Int           @default(0)
+  successRows     Int           @default(0)
+  errorRows       Int           @default(0)
+
+  // Results
+  errors          String?       @db.Text // JSON array of errors
+  createdIds      String[]      // IDs of created records
+  updatedIds      String[]      // IDs of updated records
+
+  // Timing
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  createdAt       DateTime      @default(now())
+
+  @@index([shopId, status])
+  @@index([shopId, createdAt])
+}
+
+enum ImportJobType {
+  PRICING_RULES
+  BUNDLES
+  CUSTOMER_GROUPS
+  BOGO_OFFERS
+  GEO_RULES
+}
+
+enum ImportJobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}

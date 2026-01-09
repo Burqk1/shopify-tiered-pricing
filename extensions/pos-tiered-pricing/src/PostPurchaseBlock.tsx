@@ -65,7 +65,7 @@ export function PostPurchaseBlock() {
 
   return (
     <POSBlock>
-      <Stack direction="block" gap="200">
+      <Stack direction="vertical">
         <Banner
           title="Volume Discount Applied!"
           variant="confirmation"

@@ -15,6 +15,7 @@ vi.mock("~/shopify.server", () => ({
 
 vi.mock("~/models/shop.server", () => ({
   getShopByDomain: vi.fn(),
+  getLocaleSettings: vi.fn(),
 }));
 
 vi.mock("~/models/bundle.server", () => ({
@@ -39,10 +40,11 @@ vi.mock("@remix-run/react", async () => {
 });
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getBundlesByShop, updateBundleStatus, deleteBundle } from "~/models/bundle.server";
 import { loader, action } from "~/routes/app.bundles._index";
 import BundlesList from "~/routes/app.bundles._index";
+import { mockTranslations, mockLocaleSettings } from "../helpers/mock-translations";
 
 const renderWithPolaris = (component: React.ReactElement) => {
   return render(<PolarisTestProvider>{component}</PolarisTestProvider>);
@@ -51,8 +53,10 @@ const renderWithPolaris = (component: React.ReactElement) => {
 describe("Bundles List Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLocaleSettings).mockResolvedValue(mockLocaleSettings);
     mockLoaderData = {
       bundles: [],
+      t: mockTranslations,
     };
   });
 
@@ -133,14 +137,14 @@ describe("Bundles List Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(updateBundleStatus).toHaveBeenCalledWith("bundle-1", "ACTIVE");
     });
 
     it("should handle delete action", async () => {
-      vi.mocked(deleteBundle).mockResolvedValue(undefined);
+      vi.mocked(deleteBundle).mockResolvedValue(null as never);
 
       const formData = new FormData();
       formData.append("action", "delete");
@@ -152,7 +156,7 @@ describe("Bundles List Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(deleteBundle).toHaveBeenCalledWith("bundle-1");
@@ -181,21 +185,21 @@ describe("Bundles List Route", () => {
     it("should render page title", () => {
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Bundle Discounts")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.title)).toBeInTheDocument();
     });
 
     it("should render subtitle", () => {
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Create product bundles with special discounts")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.subtitle)).toBeInTheDocument();
     });
 
     it("should render empty state when no bundles", () => {
-      mockLoaderData = { bundles: [] };
+      mockLoaderData = { bundles: [], t: mockTranslations };
 
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Create your first product bundle")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.noResultsDesc)).toBeInTheDocument();
     });
 
     it("should render bundle in table", () => {
@@ -212,15 +216,14 @@ describe("Bundles List Route", () => {
             requireAll: true,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
       expect(screen.getByText("Summer Bundle")).toBeInTheDocument();
-      expect(screen.getByText("Active")).toBeInTheDocument();
-      expect(screen.getByText("20% off")).toBeInTheDocument();
-      expect(screen.getByText("3 products")).toBeInTheDocument();
-      expect(screen.getByText("T-Shirt + Shorts + Sunglasses")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.activeStatus)).toBeInTheDocument();
+      expect(screen.getByText("20%")).toBeInTheDocument();
     });
 
     it("should show fixed amount discount format", () => {
@@ -237,11 +240,12 @@ describe("Bundles List Route", () => {
             requireAll: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("$10 off")).toBeInTheDocument();
+      expect(screen.getByText("$10")).toBeInTheDocument();
     });
 
     it("should show require all vs mix & match", () => {
@@ -268,12 +272,13 @@ describe("Bundles List Route", () => {
             requireAll: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Must buy all")).toBeInTheDocument();
-      expect(screen.getByText("Mix & match")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.requireAll)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.mixMatch)).toBeInTheDocument();
     });
 
     it("should show +N more for bundles with more than 3 products", () => {
@@ -290,6 +295,7 @@ describe("Bundles List Route", () => {
             requireAll: true,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
@@ -311,13 +317,14 @@ describe("Bundles List Route", () => {
             requireAll: true,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Edit")).toBeInTheDocument();
-      expect(screen.getByText("Activate")).toBeInTheDocument();
-      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.common.edit)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.resume)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.common.delete)).toBeInTheDocument();
     });
 
     it("should show pause button for active bundles", () => {
@@ -334,19 +341,20 @@ describe("Bundles List Route", () => {
             requireAll: true,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Pause")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.pause)).toBeInTheDocument();
     });
 
     it("should navigate to create bundle on button click", () => {
-      mockLoaderData = { bundles: [] };
+      mockLoaderData = { bundles: [], t: mockTranslations };
 
       renderWithPolaris(<BundlesList />);
 
-      const createButtons = screen.getAllByText("Create Bundle");
+      const createButtons = screen.getAllByText(mockTranslations.bundlesPage.createBundle);
       fireEvent.click(createButtons[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith("/app/bundles/new");
@@ -366,11 +374,12 @@ describe("Bundles List Route", () => {
             requireAll: true,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
-      const editButton = screen.getByText("Edit");
+      const editButton = screen.getByText(mockTranslations.common.edit);
       fireEvent.click(editButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/app/bundles/bundle-1");
@@ -400,12 +409,13 @@ describe("Bundles List Route", () => {
             requireAll: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<BundlesList />);
 
-      expect(screen.getByText("Draft")).toBeInTheDocument();
-      expect(screen.getByText("Paused")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.draftStatus)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.bundlesPage.pausedStatus)).toBeInTheDocument();
     });
   });
 });

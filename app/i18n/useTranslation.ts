@@ -55,10 +55,12 @@ export function createTranslator(locale: string) {
 
 /**
  * Get translations object for a locale
+ * Note: We use type assertion because all translations have the same structure
+ * but TypeScript sees them as different literal types
  */
 export function getTranslations(locale: string): TranslationKeys {
   const currentLocale = (locale in translations ? locale : "en") as Locale;
-  return translations[currentLocale];
+  return translations[currentLocale] as unknown as TranslationKeys;
 }
 
 export { translations, type Locale, type TranslationKeys };

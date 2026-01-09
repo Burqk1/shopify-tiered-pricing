@@ -142,7 +142,7 @@ export function ProductBlock() {
 
   return (
     <POSBlock>
-      <Stack direction="block" gap="200">
+      <Stack direction="vertical">
         <Banner
           title={ruleName || "Buy More, Save More!"}
           variant="information"

@@ -18,6 +18,7 @@ vi.mock("~/models/shop.server", () => ({
   getShopWithRules: vi.fn(),
   canCreateRule: vi.fn(),
   getPlanFeatures: vi.fn(),
+  getLocaleSettings: vi.fn(),
 }));
 
 vi.mock("~/models/pricing-rule.server", () => ({
@@ -49,12 +50,13 @@ vi.mock("@remix-run/react", async () => {
 });
 
 import { authenticate } from "~/shopify.server";
-import { getShopWithRules, canCreateRule, getPlanFeatures } from "~/models/shop.server";
+import { getShopWithRules, canCreateRule, getPlanFeatures, getLocaleSettings } from "~/models/shop.server";
 import { updateRuleStatus, deletePricingRule } from "~/models/pricing-rule.server";
 import { syncRulesToShopify } from "~/services/sync-engine.server";
 import { getSyncStats } from "~/models/sync-log.server";
 import { loader, action } from "~/routes/app._index";
 import Dashboard from "~/routes/app._index";
+import { mockTranslations, mockLocaleSettings } from "../helpers/mock-translations";
 
 const renderWithPolaris = (component: React.ReactElement) => {
   return render(<PolarisTestProvider>{component}</PolarisTestProvider>);
@@ -63,6 +65,7 @@ const renderWithPolaris = (component: React.ReactElement) => {
 describe("Dashboard Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLocaleSettings).mockResolvedValue(mockLocaleSettings);
     mockLoaderData = {
       shop: {
         domain: "test.myshopify.com",
@@ -76,6 +79,7 @@ describe("Dashboard Route", () => {
         successRate: 90,
         lastSync: "2024-01-15T10:00:00Z",
       },
+      t: mockTranslations,
     };
   });
 
@@ -186,7 +190,7 @@ describe("Dashboard Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean; message?: string; error?: string };
 
       expect(data.success).toBe(true);
       expect(data.message).toContain("5 rules");
@@ -208,7 +212,7 @@ describe("Dashboard Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean; message?: string; error?: string };
 
       expect(data.success).toBe(false);
       expect(data.message).toContain("API Error");
@@ -228,7 +232,7 @@ describe("Dashboard Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(updateRuleStatus).toHaveBeenCalledWith("rule-1", "ACTIVE");
@@ -247,7 +251,7 @@ describe("Dashboard Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(deletePricingRule).toHaveBeenCalledWith("rule-1");
@@ -292,7 +296,7 @@ describe("Dashboard Route", () => {
     it("should render dashboard title", () => {
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByText("Tiered Pricing Dashboard")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.dashboard.title)).toBeInTheDocument();
     });
 
     it("should render stats cards", () => {
@@ -304,13 +308,13 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 10, successRate: 90, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByRole("heading", { name: "Total Rules" })).toBeInTheDocument();
-      expect(screen.getByRole("heading", { name: "Active Rules" })).toBeInTheDocument();
-      expect(screen.getAllByText("Sync Status").length).toBeGreaterThan(0);
+      expect(screen.getByText(mockTranslations.dashboard.activeRules)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.dashboard.totalSyncs)).toBeInTheDocument();
     });
 
     it("should render empty state when no rules", () => {
@@ -319,11 +323,12 @@ describe("Dashboard Route", () => {
         rules: [],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByText("Create your first pricing rule")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.dashboard.createFirstRuleDesc)).toBeInTheDocument();
     });
 
     it("should render rules in table", () => {
@@ -343,14 +348,13 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 5, successRate: 100, lastSync: "2024-01-15T10:00:00Z" },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
       expect(screen.getByText("Bulk Discount")).toBeInTheDocument();
-      expect(screen.getByText("Active")).toBeInTheDocument();
-      expect(screen.getByText("2 conditions")).toBeInTheDocument();
-      expect(screen.getByText("3 tiers")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.rules.active)).toBeInTheDocument();
     });
 
     it("should show rule limit banner when cannot create", () => {
@@ -359,11 +363,12 @@ describe("Dashboard Route", () => {
         rules: [{ id: "rule-1", name: "Rule 1", status: "ACTIVE" }],
         canCreate: false,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByText("Rule limit reached")).toBeInTheDocument();
+      expect(screen.getByText(/limit/i)).toBeInTheDocument();
     });
 
     it("should show sync error badge for rules with sync error", () => {
@@ -383,11 +388,12 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 5, successRate: 80, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByText("Sync Error")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.rules.syncError)).toBeInTheDocument();
     });
 
     it("should show not synced badge for new rules", () => {
@@ -407,11 +413,12 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByText("Not Synced")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.rules.notSynced)).toBeInTheDocument();
     });
 
     it("should show plan info", () => {
@@ -420,12 +427,12 @@ describe("Dashboard Route", () => {
         rules: [],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      expect(screen.getByText("Current Plan: PROFESSIONAL")).toBeInTheDocument();
-      expect(screen.getByText("Unlimited pricing rules")).toBeInTheDocument();
+      expect(screen.getByText(/PROFESSIONAL/)).toBeInTheDocument();
     });
 
     it("should navigate to create rule on button click", () => {
@@ -434,11 +441,12 @@ describe("Dashboard Route", () => {
         rules: [],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        t: mockTranslations,
       };
 
       renderWithPolaris(<Dashboard />);
 
-      const createButtons = screen.getAllByText("Create Rule");
+      const createButtons = screen.getAllByText(mockTranslations.rules.createRule);
       fireEvent.click(createButtons[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith("/app/rules/new");

@@ -1,0 +1,280 @@
+{% comment %}
+  Cart Progress Bar Block
+  Shows progress towards free shipping or discount unlock
+{% endcomment %}
+
+{% assign threshold = block.settings.threshold | default: 50 %}
+{% assign cart_total = cart.total_price | divided_by: 100.0 %}
+{% assign remaining = threshold | minus: cart_total %}
+{% assign progress = cart_total | divided_by: threshold | times: 100 %}
+{% if progress > 100 %}
+  {% assign progress = 100 %}
+{% endif %}
+{% assign is_complete = false %}
+{% if cart_total >= threshold %}
+  {% assign is_complete = true %}
+  {% assign remaining = 0 %}
+{% endif %}
+
+<div class="cart-progress-bar"
+     data-threshold="{{ threshold }}"
+     data-cart-total="{{ cart_total }}"
+     style="
+       --progress-bar-color: {{ block.settings.bar_color }};
+       --progress-bg-color: {{ block.settings.bg_color }};
+       --progress-text-color: {{ block.settings.text_color }};
+       --progress-percent: {{ progress }}%;
+     ">
+
+  <div class="cart-progress-bar__content">
+    {% if is_complete %}
+      <p class="cart-progress-bar__message cart-progress-bar__message--complete">
+        {{ block.settings.complete_message }}
+      </p>
+    {% elsif cart_total == 0 %}
+      <p class="cart-progress-bar__message">
+        {{ block.settings.empty_message | replace: '{amount}', remaining | money }}
+      </p>
+    {% else %}
+      <p class="cart-progress-bar__message">
+        {{ block.settings.progress_message | replace: '{amount}', remaining | money }}
+      </p>
+    {% endif %}
+
+    <div class="cart-progress-bar__track">
+      <div class="cart-progress-bar__fill" style="width: {{ progress }}%"></div>
+    </div>
+
+    {% if block.settings.show_percentage and progress < 100 %}
+      <p class="cart-progress-bar__percent">{{ progress | round }}% complete</p>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  .cart-progress-bar {
+    padding: {{ block.settings.padding }}px;
+    background: {{ block.settings.container_bg }};
+    border-radius: {{ block.settings.border_radius }}px;
+    margin: {{ block.settings.margin }}px 0;
+  }
+
+  .cart-progress-bar__content {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .cart-progress-bar__message {
+    margin: 0 0 10px;
+    font-size: {{ block.settings.font_size }}px;
+    color: var(--progress-text-color);
+    text-align: center;
+    font-weight: 500;
+  }
+
+  .cart-progress-bar__message--complete {
+    color: {{ block.settings.complete_color }};
+  }
+
+  .cart-progress-bar__track {
+    height: {{ block.settings.bar_height }}px;
+    background: var(--progress-bg-color);
+    border-radius: {{ block.settings.bar_height | divided_by: 2 }}px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .cart-progress-bar__fill {
+    height: 100%;
+    background: var(--progress-bar-color);
+    border-radius: {{ block.settings.bar_height | divided_by: 2 }}px;
+    transition: width 0.5s ease;
+    {% if block.settings.animated %}
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+    animation: progress-bar-stripes 1s linear infinite;
+    {% endif %}
+  }
+
+  .cart-progress-bar__percent {
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--progress-text-color);
+    text-align: center;
+    opacity: 0.7;
+  }
+
+  @keyframes progress-bar-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Cart Progress Bar",
+  "class": "cart-progress-bar-section",
+  "target": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Threshold Settings"
+    },
+    {
+      "type": "number",
+      "id": "threshold",
+      "label": "Threshold Amount",
+      "default": 50,
+      "info": "Amount needed to reach the goal (in shop currency)"
+    },
+    {
+      "type": "select",
+      "id": "reward_type",
+      "label": "Reward Type",
+      "options": [
+        { "value": "shipping", "label": "Free Shipping" },
+        { "value": "discount", "label": "Discount" },
+        { "value": "gift", "label": "Free Gift" }
+      ],
+      "default": "shipping"
+    },
+    {
+      "type": "header",
+      "content": "Messages"
+    },
+    {
+      "type": "text",
+      "id": "empty_message",
+      "label": "Empty Cart Message",
+      "default": "Add {amount} to get free shipping!"
+    },
+    {
+      "type": "text",
+      "id": "progress_message",
+      "label": "Progress Message",
+      "default": "Only {amount} away from free shipping!"
+    },
+    {
+      "type": "text",
+      "id": "complete_message",
+      "label": "Complete Message",
+      "default": "You've unlocked free shipping!"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "bar_color",
+      "label": "Progress Bar Color",
+      "default": "#4CAF50"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Track Background",
+      "default": "#e0e0e0"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "complete_color",
+      "label": "Complete Text Color",
+      "default": "#4CAF50"
+    },
+    {
+      "type": "color_background",
+      "id": "container_bg",
+      "label": "Container Background",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "header",
+      "content": "Style"
+    },
+    {
+      "type": "range",
+      "id": "bar_height",
+      "label": "Bar Height",
+      "min": 4,
+      "max": 20,
+      "step": 2,
+      "default": 8,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "label": "Font Size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "default": 16,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "default": 16,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "label": "Margin",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "default": 16,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "default": 8,
+      "unit": "px"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_percentage",
+      "label": "Show Percentage",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "animated",
+      "label": "Animated Stripes",
+      "default": false
+    }
+  ],
+  "presets": [
+    {
+      "name": "Cart Progress Bar",
+      "category": "Cart"
+    }
+  ]
+}
+{% endschema %}

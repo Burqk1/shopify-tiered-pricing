@@ -73,7 +73,6 @@ export function ConditionSelector({
     return options;
   }, [allowCustomerTags]);
 
-  // Filter products/collections based on search
   const filteredProducts = useMemo(() => {
     if (!searchValue) return products.slice(0, 10);
     const lower = searchValue.toLowerCase();
@@ -114,7 +113,6 @@ export function ConditionSelector({
   );
 
   const handleAddAllProducts = useCallback(() => {
-    // Remove any existing ALL_PRODUCTS condition first
     const filtered = conditions.filter((c) => c.type !== "ALL_PRODUCTS");
     onChange([...filtered, { type: "ALL_PRODUCTS", value: "*", label: "All Products" }]);
   }, [conditions, onChange]);
@@ -137,7 +135,6 @@ export function ConditionSelector({
 
   return (
     <BlockStack gap="400">
-      {/* Existing Conditions */}
       {conditions.length > 0 && (
         <Card background="bg-surface-secondary">
           <BlockStack gap="200">
@@ -165,7 +162,6 @@ export function ConditionSelector({
         </Card>
       )}
 
-      {/* Add New Condition */}
       <Card>
         <BlockStack gap="300">
           <Text variant="headingSm" as="h4">
@@ -179,7 +175,6 @@ export function ConditionSelector({
             onChange={(value) => setConditionType(value as ConditionType)}
           />
 
-          {/* Product Selector */}
           {conditionType === "PRODUCT" && (
             <BlockStack gap="200">
               <TextField
@@ -228,7 +223,6 @@ export function ConditionSelector({
             </BlockStack>
           )}
 
-          {/* Collection Selector */}
           {conditionType === "COLLECTION" && (
             <BlockStack gap="200">
               <TextField
@@ -272,7 +266,6 @@ export function ConditionSelector({
             </BlockStack>
           )}
 
-          {/* Customer Tag Input */}
           {conditionType === "CUSTOMER_TAG" && (
             <InlineStack gap="200" blockAlign="end">
               <Box minWidth="300px">
@@ -291,7 +284,6 @@ export function ConditionSelector({
             </InlineStack>
           )}
 
-          {/* All Products */}
           {conditionType === "ALL_PRODUCTS" && (
             <BlockStack gap="200">
               <Text variant="bodyMd" as="p">
@@ -305,7 +297,6 @@ export function ConditionSelector({
         </BlockStack>
       </Card>
 
-      {/* Help Text */}
       {!allowCustomerTags && (
         <Box background="bg-surface-warning" padding="300" borderRadius="200">
           <Text variant="bodySm" as="p">

@@ -55,7 +55,7 @@ describe("Logger Service", () => {
       testLogger.info("Test message");
 
       expect(consoleSpy.log).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
 
       expect(output.level).toBe("info");
       expect(output.message).toBe("Test message");
@@ -67,7 +67,7 @@ describe("Logger Service", () => {
       logger.warn("Warning message");
 
       expect(consoleSpy.warn).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.warn.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.warn.mock.calls[0][0] as string);
       expect(output.level).toBe("warn");
     });
 
@@ -76,7 +76,7 @@ describe("Logger Service", () => {
       logger.error("Error occurred", error);
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.error.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.error.mock.calls[0][0] as string);
 
       expect(output.level).toBe("error");
       expect(output.error.name).toBe("Error");
@@ -89,7 +89,7 @@ describe("Logger Service", () => {
 
       childLogger.info("Child message");
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.context.shopId).toBe("shop-1");
       expect(output.context.ruleId).toBe("rule-1");
     });
@@ -102,7 +102,7 @@ describe("Logger Service", () => {
       });
 
       expect(consoleSpy.log).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
 
       expect(output.metrics.responseTime).toBe(150);
       expect(output.metrics.dbQueries).toBe(5);
@@ -123,7 +123,7 @@ describe("Logger Service", () => {
       expect(result).toBe("success");
       expect(consoleSpy.log).toHaveBeenCalled();
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.message).toBe("Test operation completed");
       expect(output.context.duration).toBeGreaterThanOrEqual(10);
     });
@@ -139,7 +139,7 @@ describe("Logger Service", () => {
       ).rejects.toThrow("Test error");
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.error.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.error.mock.calls[0][0] as string);
       expect(output.message).toBe("Failing operation failed");
     });
   });
@@ -154,7 +154,7 @@ describe("Logger Service", () => {
       const requestLogger = createRequestLogger(request, "test.myshopify.com");
       requestLogger.info("Request received");
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.context.requestId).toMatch(/^req_/);
       expect(output.context.shopDomain).toBe("test.myshopify.com");
       expect(output.context.method).toBe("POST");
@@ -167,7 +167,7 @@ describe("Logger Service", () => {
       logApiRequest("GET", "/api/products", 200, 150, { shopId: "shop-1" });
 
       expect(consoleSpy.log).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.level).toBe("info");
       expect(output.message).toBe("GET /api/products 200");
       expect(output.context.duration).toBe(150);
@@ -177,7 +177,7 @@ describe("Logger Service", () => {
       logApiRequest("GET", "/api/products", 404, 50);
 
       expect(consoleSpy.warn).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.warn.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.warn.mock.calls[0][0] as string);
       expect(output.level).toBe("warn");
     });
 
@@ -185,7 +185,7 @@ describe("Logger Service", () => {
       logApiRequest("POST", "/api/create", 500, 200);
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.error.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.error.mock.calls[0][0] as string);
       expect(output.level).toBe("error");
     });
   });
@@ -194,7 +194,7 @@ describe("Logger Service", () => {
     it("should log sync start", () => {
       logSyncOperation("shop-1", "start");
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.message).toBe("Sync operation started");
       expect(output.context.action).toBe("sync_start");
     });
@@ -205,7 +205,7 @@ describe("Logger Service", () => {
         duration: 1500,
       });
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.message).toBe("Sync operation completed");
       expect(output.context.rulesCount).toBe(5);
       expect(output.context.duration).toBe(1500);
@@ -216,7 +216,7 @@ describe("Logger Service", () => {
       logSyncOperation("shop-1", "error", { error });
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.error.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.error.mock.calls[0][0] as string);
       expect(output.error.message).toBe("Sync failed");
     });
   });
@@ -230,7 +230,7 @@ describe("Logger Service", () => {
         tier: "10+ items",
       });
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.message).toBe("Discount applied");
       expect(output.context.originalPrice).toBe(100);
       expect(output.context.discountPercent).toBe(15);
@@ -241,7 +241,7 @@ describe("Logger Service", () => {
     it("should log successful login", () => {
       logAuth("login", "test.myshopify.com");
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.level).toBe("info");
       expect(output.context.action).toBe("auth_login");
     });
@@ -250,7 +250,7 @@ describe("Logger Service", () => {
       logAuth("failed", "test.myshopify.com", { reason: "Invalid token" });
 
       expect(consoleSpy.warn).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.warn.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.warn.mock.calls[0][0] as string);
       expect(output.level).toBe("warn");
       expect(output.context.reason).toBe("Invalid token");
     });
@@ -260,7 +260,7 @@ describe("Logger Service", () => {
     it("should log webhook received", () => {
       logWebhook("orders/create", "test.myshopify.com", "received");
 
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.context.webhookTopic).toBe("orders/create");
       expect(output.context.action).toBe("webhook_received");
     });
@@ -270,7 +270,7 @@ describe("Logger Service", () => {
       logWebhook("orders/create", "test.myshopify.com", "failed", { error });
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.error.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.error.mock.calls[0][0] as string);
       expect(output.error.message).toBe("Processing failed");
     });
   });
@@ -284,7 +284,7 @@ describe("Logger Service", () => {
       flushMetrics();
 
       expect(consoleSpy.log).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.log.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.log.mock.calls[0][0] as string);
       expect(output.metrics.api_response_time_avg).toBe(175);
       expect(output.metrics.api_response_time_min).toBe(150);
       expect(output.metrics.api_response_time_max).toBe(200);
@@ -309,7 +309,7 @@ describe("Logger Service", () => {
       captureException(error, { shopId: "shop-1" });
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      const output = JSON.parse(consoleSpy.error.mock.calls[0][0]);
+      const output = JSON.parse(consoleSpy.error.mock.calls[0][0] as string);
       expect(output.error.message).toBe("Critical error");
     });
   });

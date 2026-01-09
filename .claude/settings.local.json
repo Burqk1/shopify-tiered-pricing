@@ -6,7 +6,11 @@
       "Bash(npx shopify app deploy:*)",
       "Bash(npx shopify app config link --reset)",
       "Bash(npm install:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -c:*)",
+      "Bash(grep:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

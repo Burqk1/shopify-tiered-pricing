@@ -1,0 +1,27 @@
+{
+  "cart_progress": {
+    "name": "Cart Progress Bar",
+    "settings": {
+      "threshold": {
+        "label": "Threshold Amount"
+      },
+      "empty_message": {
+        "label": "Empty Cart Message"
+      },
+      "progress_message": {
+        "label": "Progress Message"
+      },
+      "complete_message": {
+        "label": "Complete Message"
+      }
+    }
+  },
+  "announcement_progress": {
+    "name": "Announcement Progress Bar",
+    "settings": {
+      "threshold": {
+        "label": "Threshold Amount"
+      }
+    }
+  }
+}

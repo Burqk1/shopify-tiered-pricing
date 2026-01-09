@@ -32,6 +32,8 @@ import {
 import { useState, useCallback } from "react";
 
 import { authenticate } from "~/shopify.server";
+import { getLocaleSettings } from "~/models/shop.server";
+import { getTranslations } from "~/i18n";
 
 interface FAQ {
   question: string;
@@ -41,13 +43,18 @@ interface FAQ {
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
 
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
   return json({
     shopDomain: session.shop,
+    t,
   });
 };
 
 export default function Help() {
-  const { shopDomain } = useLoaderData<typeof loader>();
+  const { shopDomain, t } = useLoaderData<typeof loader>();
   const [openFAQ, setOpenFAQ] = useState<number | null>(null);
 
   const toggleFAQ = useCallback((index: number) => {
@@ -55,100 +62,42 @@ export default function Help() {
   }, []);
 
   const faqs: FAQ[] = [
-    {
-      question: "How do I create a volume discount?",
-      answer: `Go to "Pricing Rules" in the sidebar and click "Create Rule".
-      1. Give your rule a name (e.g., "T-Shirt Bulk Discount")
-      2. Select which products this applies to (all products, specific collection, or individual products)
-      3. Add discount tiers (e.g., 5+ items = 10% off, 10+ items = 20% off)
-      4. Save and activate the rule
-      5. Go to "Discounts" to create an automatic discount that uses this rule`,
-    },
-    {
-      question: "Why isn't the discount showing on my product pages?",
-      answer: `Make sure you've added the "Volume Discount Table" block to your theme:
-      1. Go to Online Store → Themes → Customize
-      2. Navigate to a product page
-      3. Click "Add block" or "Add section"
-      4. Find "Apps" → "Volume Discount Table"
-      5. Position it where you want and save
-
-      Also ensure your pricing rule is set to "Active" status.`,
-    },
-    {
-      question: "Why isn't the discount applying at checkout?",
-      answer: `The discount only applies automatically if you've created a Shopify Discount:
-      1. Go to "Discounts" in the app sidebar
-      2. Select your pricing rule
-      3. Click "Create Discount"
-
-      This creates an automatic discount in Shopify that applies the volume pricing at checkout.`,
-    },
-    {
-      question: "Can I offer different discounts to wholesale customers?",
-      answer: `Yes! When creating a pricing rule, you can set a customer condition:
-      1. Add a condition with type "Customer Tag"
-      2. Enter the tag (e.g., "wholesale" or "vip")
-      3. Only customers with that tag will see and receive the discount
-
-      You can tag customers in Shopify Admin → Customers.`,
-    },
-    {
-      question: "What's the difference between FREE, GROWTH, and PROFESSIONAL plans?",
-      answer: `• FREE: 1 pricing rule, basic features, "Powered by" branding
-      • GROWTH ($9.99/mo): Unlimited rules, remove branding, priority support
-      • PROFESSIONAL ($24.99/mo): Everything in Growth + customer tag targeting, API access, scheduled rules`,
-    },
-    {
-      question: "How do I remove the 'Powered by Tiered Pricing' text?",
-      answer: `Upgrade to the GROWTH or PROFESSIONAL plan to remove branding. Go to Settings → Manage Plan to upgrade.`,
-    },
-    {
-      question: "Can I schedule discounts to start/end at specific dates?",
-      answer: `Yes, on the PROFESSIONAL plan. When creating a rule, you can set:
-      • Start Date: When the discount becomes active
-      • End Date: When the discount automatically expires
-
-      Perfect for seasonal sales or limited-time promotions.`,
-    },
-    {
-      question: "What happens if a customer qualifies for multiple discounts?",
-      answer: `The rule with the highest "Priority" number wins. When creating rules, set higher priority numbers for rules you want to take precedence.
-
-      For example:
-      • "VIP 30% off" with priority 10
-      • "General 10% off" with priority 1
-
-      A VIP customer will get 30% off, not 10%.`,
-    },
+    { question: t.helpPage.faq1Q, answer: t.helpPage.faq1A },
+    { question: t.helpPage.faq2Q, answer: t.helpPage.faq2A },
+    { question: t.helpPage.faq3Q, answer: t.helpPage.faq3A },
+    { question: t.helpPage.faq4Q, answer: t.helpPage.faq4A },
+    { question: t.helpPage.faq5Q, answer: t.helpPage.faq5A },
+    { question: t.helpPage.faq6Q, answer: t.helpPage.faq6A },
+    { question: t.helpPage.faq7Q, answer: t.helpPage.faq7A },
+    { question: t.helpPage.faq8Q, answer: t.helpPage.faq8A },
   ];
 
   return (
     <Page
-      title="Help & Documentation"
-      subtitle="Learn how to use Tiered Pricing"
-      backAction={{ content: "Dashboard", url: "/app" }}
+      title={t.helpPage.title}
+      subtitle={t.helpPage.subtitle}
+      backAction={{ content: t.helpPage.backToDashboard, url: "/app" }}
     >
       <BlockStack gap="500">
         {/* Quick Links */}
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Quick Links
+              {t.helpPage.quickLinks}
             </Text>
             <InlineStack gap="300" wrap>
               <Button variant="secondary" url="/app/setup">
-                Setup Guide
+                {t.helpPage.setupGuide}
               </Button>
               <Button variant="secondary" url="/app/rules/new">
-                Create First Rule
+                {t.helpPage.createFirstRule}
               </Button>
               <Button
                 variant="secondary"
                 url={`https://${shopDomain}/admin/themes/current/editor`}
                 external
               >
-                Theme Editor
+                {t.helpPage.themeEditor}
               </Button>
             </InlineStack>
           </BlockStack>
@@ -160,7 +109,7 @@ export default function Help() {
             <InlineStack gap="200" align="start">
               <Icon source={PlayIcon} tone="base" />
               <Text variant="headingMd" as="h2">
-                Video Tutorial
+                {t.helpPage.videoTutorial}
               </Text>
             </InlineStack>
             <Box
@@ -170,11 +119,10 @@ export default function Help() {
             >
               <BlockStack gap="200" inlineAlign="center">
                 <Text variant="headingLg" as="p" alignment="center">
-                  Coming Soon
+                  {t.helpPage.comingSoon}
                 </Text>
                 <Text variant="bodySm" tone="subdued" as="p" alignment="center">
-                  Video tutorials will be available soon. Follow the written
-                  guide below for now.
+                  {t.helpPage.videoComingSoonDesc}
                 </Text>
               </BlockStack>
             </Box>
@@ -185,32 +133,20 @@ export default function Help() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Getting Started Guide
+              {t.helpPage.gettingStartedGuide}
             </Text>
 
             <BlockStack gap="300">
               <Text variant="headingSm" as="h3">
-                Step 1: Create a Pricing Rule
+                {t.helpPage.step1Title}
               </Text>
               <List type="number">
-                <List.Item>
-                  Click "Pricing Rules" in the sidebar
-                </List.Item>
-                <List.Item>
-                  Click "Create Rule" button
-                </List.Item>
-                <List.Item>
-                  Enter a name (e.g., "Summer Sale Volume Discount")
-                </List.Item>
-                <List.Item>
-                  Choose which products this applies to
-                </List.Item>
-                <List.Item>
-                  Add discount tiers (quantity thresholds and discount amounts)
-                </List.Item>
-                <List.Item>
-                  Save and set status to "Active"
-                </List.Item>
+                <List.Item>{t.helpPage.step1_1}</List.Item>
+                <List.Item>{t.helpPage.step1_2}</List.Item>
+                <List.Item>{t.helpPage.step1_3}</List.Item>
+                <List.Item>{t.helpPage.step1_4}</List.Item>
+                <List.Item>{t.helpPage.step1_5}</List.Item>
+                <List.Item>{t.helpPage.step1_6}</List.Item>
               </List>
             </BlockStack>
 
@@ -218,30 +154,16 @@ export default function Help() {
 
             <BlockStack gap="300">
               <Text variant="headingSm" as="h3">
-                Step 2: Add the Pricing Table to Your Theme
+                {t.helpPage.step2Title}
               </Text>
               <List type="number">
-                <List.Item>
-                  Go to Shopify Admin → Online Store → Themes
-                </List.Item>
-                <List.Item>
-                  Click "Customize" on your active theme
-                </List.Item>
-                <List.Item>
-                  Use the page dropdown to select "Products" → "Default product"
-                </List.Item>
-                <List.Item>
-                  Click "Add block" in the product information section
-                </List.Item>
-                <List.Item>
-                  Select "Apps" → "Volume Discount Table"
-                </List.Item>
-                <List.Item>
-                  Customize the table appearance (colors, columns)
-                </List.Item>
-                <List.Item>
-                  Click "Save"
-                </List.Item>
+                <List.Item>{t.helpPage.step2_1}</List.Item>
+                <List.Item>{t.helpPage.step2_2}</List.Item>
+                <List.Item>{t.helpPage.step2_3}</List.Item>
+                <List.Item>{t.helpPage.step2_4}</List.Item>
+                <List.Item>{t.helpPage.step2_5}</List.Item>
+                <List.Item>{t.helpPage.step2_6}</List.Item>
+                <List.Item>{t.helpPage.step2_7}</List.Item>
               </List>
             </BlockStack>
 
@@ -249,24 +171,14 @@ export default function Help() {
 
             <BlockStack gap="300">
               <Text variant="headingSm" as="h3">
-                Step 3: Create an Automatic Discount
+                {t.helpPage.step3Title}
               </Text>
               <List type="number">
-                <List.Item>
-                  Click "Discounts" in the app sidebar
-                </List.Item>
-                <List.Item>
-                  Enter a discount title (customers will see this at checkout)
-                </List.Item>
-                <List.Item>
-                  Select the pricing rule you created
-                </List.Item>
-                <List.Item>
-                  Click "Create Discount"
-                </List.Item>
-                <List.Item>
-                  The discount is now active and will apply automatically!
-                </List.Item>
+                <List.Item>{t.helpPage.step3_1}</List.Item>
+                <List.Item>{t.helpPage.step3_2}</List.Item>
+                <List.Item>{t.helpPage.step3_3}</List.Item>
+                <List.Item>{t.helpPage.step3_4}</List.Item>
+                <List.Item>{t.helpPage.step3_5}</List.Item>
               </List>
             </BlockStack>
           </BlockStack>
@@ -278,7 +190,7 @@ export default function Help() {
             <InlineStack gap="200" align="start">
               <Icon source={QuestionCircleIcon} tone="base" />
               <Text variant="headingMd" as="h2">
-                Frequently Asked Questions
+                {t.helpPage.faq}
               </Text>
             </InlineStack>
 
@@ -329,7 +241,7 @@ export default function Help() {
         <Card>
           <BlockStack gap="400">
             <Text variant="headingMd" as="h2">
-              Need More Help?
+              {t.helpPage.needMoreHelp}
             </Text>
             <InlineStack gap="300" wrap>
               <Button
@@ -338,7 +250,7 @@ export default function Help() {
                 url="mailto:support@tieredpricing.app"
                 external
               >
-                Email Support
+                {t.helpPage.emailSupport}
               </Button>
               <Button
                 variant="secondary"
@@ -346,12 +258,11 @@ export default function Help() {
                 url="https://tieredpricing.app/chat"
                 external
               >
-                Live Chat
+                {t.helpPage.liveChat}
               </Button>
             </InlineStack>
             <Text variant="bodySm" tone="subdued" as="p">
-              Our support team typically responds within 24 hours. GROWTH and
-              PROFESSIONAL plan users get priority support.
+              {t.helpPage.supportResponseTime}
             </Text>
           </BlockStack>
         </Card>

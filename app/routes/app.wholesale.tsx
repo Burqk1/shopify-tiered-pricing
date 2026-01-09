@@ -29,7 +29,8 @@ import { useState, useCallback } from "react";
 
 import { authenticate } from "~/shopify.server";
 import { DeleteConfirmModal } from "~/components/DeleteConfirmModal";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
+import { getTranslations } from "~/i18n";
 import prisma from "~/db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -54,6 +55,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     where: { shopId: shop.id, status: "PENDING" },
   });
 
+  const localeSettings = await getLocaleSettings(session.shop);
+  const locale = localeSettings?.locale || "en";
+  const t = getTranslations(locale);
+
   return json({
     customerGroups: customerGroups.map((g) => ({
       id: g.id,
@@ -67,6 +72,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       priceListCount: g._count.priceLists,
     })),
     pendingApplications,
+    t,
   });
 };
 
@@ -119,7 +125,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Wholesale() {
-  const { customerGroups, pendingApplications } = useLoaderData<typeof loader>();
+  const { customerGroups, pendingApplications, t } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
 
@@ -192,30 +198,30 @@ export default function Wholesale() {
       </IndexTable.Cell>
       <IndexTable.Cell>
         {group.discountType === "PERCENTAGE"
-          ? `${group.discountValue}% off`
-          : `$${group.discountValue} off`}
+          ? `${group.discountValue}% ${t.wholesalePage.off}`
+          : `$${group.discountValue} ${t.wholesalePage.off}`}
       </IndexTable.Cell>
       <IndexTable.Cell>
-        {group.minOrderValue ? `$${group.minOrderValue}` : "None"}
+        {group.minOrderValue ? `$${group.minOrderValue}` : t.wholesalePage.none}
       </IndexTable.Cell>
       <IndexTable.Cell>
-        {group.netTerms ? `Net ${group.netTerms}` : "Standard"}
+        {group.netTerms ? `${t.wholesalePage.net} ${group.netTerms}` : t.wholesalePage.standard}
       </IndexTable.Cell>
       <IndexTable.Cell>
         <InlineStack gap="200">
-          {group.taxExempt && <Badge tone="info">Tax Exempt</Badge>}
+          {group.taxExempt && <Badge tone="info">{t.wholesalePage.taxExempt}</Badge>}
           {group.priceListCount > 0 && (
-            <Badge>{`${group.priceListCount} custom prices`}</Badge>
+            <Badge>{`${group.priceListCount} ${t.wholesalePage.customPrices}`}</Badge>
           )}
         </InlineStack>
       </IndexTable.Cell>
       <IndexTable.Cell>
         <InlineStack gap="200">
           <Button size="slim" url={`/app/wholesale/${group.id}`}>
-            Edit
+            {t.wholesalePage.edit}
           </Button>
           <Button size="slim" tone="critical" onClick={() => openDeleteModal({ id: group.id, name: group.name })}>
-            Delete
+            {t.wholesalePage.delete}
           </Button>
         </InlineStack>
       </IndexTable.Cell>
@@ -224,17 +230,17 @@ export default function Wholesale() {
 
   return (
     <Page
-      title="B2B & Wholesale"
-      subtitle="Manage customer groups and wholesale pricing"
-      backAction={{ content: "Home", url: "/app" }}
+      title={t.wholesalePage.title}
+      subtitle={t.wholesalePage.subtitle}
+      backAction={{ content: t.wholesalePage.home, url: "/app" }}
       primaryAction={{
-        content: "Create Customer Group",
+        content: t.wholesalePage.createCustomerGroup,
         icon: PlusIcon,
         onAction: () => setShowModal(true),
       }}
       secondaryActions={[
         {
-          content: `Applications (${pendingApplications})`,
+          content: `${t.wholesalePage.applications} (${pendingApplications})`,
           url: "/app/wholesale/applications",
         },
       ]}
@@ -242,14 +248,14 @@ export default function Wholesale() {
       <BlockStack gap="500">
         {pendingApplications > 0 && (
           <Banner
-            title={`${pendingApplications} pending wholesale application${pendingApplications > 1 ? "s" : ""}`}
+            title={`${pendingApplications} ${pendingApplications > 1 ? t.wholesalePage.pendingApplications : t.wholesalePage.pendingApplication}`}
             tone="info"
             action={{
-              content: "Review Applications",
+              content: t.wholesalePage.reviewApplications,
               url: "/app/wholesale/applications",
             }}
           >
-            <p>New businesses are waiting to join your wholesale program.</p>
+            <p>{t.wholesalePage.newBusinessesWaiting}</p>
           </Banner>
         )}
 
@@ -258,7 +264,7 @@ export default function Wholesale() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3" tone="subdued">
-                  Total Customer Groups
+                  {t.wholesalePage.totalCustomerGroups}
                 </Text>
                 <Text variant="heading2xl" as="p">
                   {customerGroups.length}
@@ -271,7 +277,7 @@ export default function Wholesale() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3" tone="subdued">
-                  Pending Applications
+                  {t.wholesalePage.pendingApplicationsCount}
                 </Text>
                 <Text variant="heading2xl" as="p">
                   {pendingApplications}
@@ -284,7 +290,7 @@ export default function Wholesale() {
             <Card>
               <BlockStack gap="200">
                 <Text variant="headingSm" as="h3" tone="subdued">
-                  Custom Price Lists
+                  {t.wholesalePage.customPriceLists}
                 </Text>
                 <Text variant="heading2xl" as="p">
                   {customerGroups.reduce((sum, g) => sum + g.priceListCount, 0)}
@@ -297,30 +303,29 @@ export default function Wholesale() {
         <Card padding="0">
           {customerGroups.length === 0 ? (
             <EmptyState
-              heading="Create your first customer group"
+              heading={t.wholesalePage.createFirstGroup}
               action={{
-                content: "Create Customer Group",
+                content: t.wholesalePage.createCustomerGroup,
                 onAction: () => setShowModal(true),
               }}
               image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
             >
               <p>
-                Customer groups allow you to offer special pricing to wholesale
-                buyers, VIP customers, or any segment you define.
+                {t.wholesalePage.emptyStateDesc}
               </p>
             </EmptyState>
           ) : (
             <IndexTable
-              resourceName={{ singular: "group", plural: "groups" }}
+              resourceName={{ singular: t.wholesalePage.group, plural: t.wholesalePage.groups }}
               itemCount={customerGroups.length}
               headings={[
-                { title: "Name" },
-                { title: "Tag" },
-                { title: "Discount" },
-                { title: "Min Order" },
-                { title: "Payment Terms" },
-                { title: "Features" },
-                { title: "Actions" },
+                { title: t.wholesalePage.name },
+                { title: t.wholesalePage.tag },
+                { title: t.wholesalePage.discount },
+                { title: t.wholesalePage.minOrder },
+                { title: t.wholesalePage.paymentTerms },
+                { title: t.wholesalePage.features },
+                { title: t.wholesalePage.actions },
               ]}
               selectable={false}
             >
@@ -335,20 +340,20 @@ export default function Wholesale() {
             <Card>
               <BlockStack gap="300">
                 <Text variant="headingMd" as="h2">
-                  How B2B Pricing Works
+                  {t.wholesalePage.howB2BWorks}
                 </Text>
                 <BlockStack gap="200">
                   <Text as="p">
-                    1. Create a customer group with a Shopify customer tag
+                    1. {t.wholesalePage.step1}
                   </Text>
                   <Text as="p">
-                    2. Set the default discount for that group
+                    2. {t.wholesalePage.step2}
                   </Text>
                   <Text as="p">
-                    3. Optionally add custom prices for specific products
+                    3. {t.wholesalePage.step3}
                   </Text>
                   <Text as="p">
-                    4. Tag customers in Shopify to add them to the group
+                    4. {t.wholesalePage.step4}
                   </Text>
                 </BlockStack>
               </BlockStack>
@@ -359,15 +364,13 @@ export default function Wholesale() {
             <Card>
               <BlockStack gap="300">
                 <Text variant="headingMd" as="h2">
-                  Wholesale Application Form
+                  {t.wholesalePage.wholesaleAppForm}
                 </Text>
                 <Text as="p">
-                  Let potential wholesale customers apply through a form on your
-                  store. Review and approve applications to automatically tag
-                  customers.
+                  {t.wholesalePage.wholesaleAppFormDesc}
                 </Text>
                 <Button url="/app/wholesale/settings">
-                  Configure Application Form
+                  {t.wholesalePage.configureAppForm}
                 </Button>
               </BlockStack>
             </Card>
@@ -379,15 +382,15 @@ export default function Wholesale() {
       <Modal
         open={showModal}
         onClose={() => setShowModal(false)}
-        title="Create Customer Group"
+        title={t.wholesalePage.modalTitle}
         primaryAction={{
-          content: "Create",
+          content: t.wholesalePage.create,
           onAction: handleCreate,
           loading: isLoading,
         }}
         secondaryActions={[
           {
-            content: "Cancel",
+            content: t.wholesalePage.cancel,
             onAction: () => setShowModal(false),
           },
         ]}
@@ -395,27 +398,27 @@ export default function Wholesale() {
         <Modal.Section>
           <FormLayout>
             <TextField
-              label="Group Name"
+              label={t.wholesalePage.groupName}
               value={name}
               onChange={setName}
-              placeholder="e.g., Wholesale, VIP, Gold Members"
+              placeholder={t.wholesalePage.groupNamePlaceholder}
               autoComplete="off"
             />
 
             <TextField
-              label="Customer Tag"
+              label={t.wholesalePage.customerTag}
               value={tag}
               onChange={setTag}
-              placeholder="e.g., wholesale"
-              helpText="Customers with this tag will receive group pricing"
+              placeholder={t.wholesalePage.customerTagPlaceholder}
+              helpText={t.wholesalePage.customerTagHelp}
               autoComplete="off"
             />
 
             <Select
-              label="Discount Type"
+              label={t.wholesalePage.discountType}
               options={[
-                { label: "Percentage Off", value: "PERCENTAGE" },
-                { label: "Fixed Amount Off", value: "FIXED_AMOUNT" },
+                { label: t.wholesalePage.percentageOff, value: "PERCENTAGE" },
+                { label: t.wholesalePage.fixedAmountOff, value: "FIXED_AMOUNT" },
               ]}
               value={discountType}
               onChange={setDiscountType}
@@ -423,7 +426,7 @@ export default function Wholesale() {
 
             <TextField
               type="number"
-              label={discountType === "PERCENTAGE" ? "Discount (%)" : "Discount Amount ($)"}
+              label={discountType === "PERCENTAGE" ? t.wholesalePage.discountPercent : t.wholesalePage.discountAmount}
               value={discountValue}
               onChange={setDiscountValue}
               autoComplete="off"
@@ -431,32 +434,32 @@ export default function Wholesale() {
 
             <TextField
               type="number"
-              label="Minimum Order Value ($)"
+              label={t.wholesalePage.minOrderValue}
               value={minOrderValue}
               onChange={setMinOrderValue}
-              placeholder="Optional"
+              placeholder={t.wholesalePage.optional}
               autoComplete="off"
-              helpText="Require minimum order value to qualify for group pricing"
+              helpText={t.wholesalePage.minOrderHelp}
             />
 
             <Select
-              label="Payment Terms"
+              label={t.wholesalePage.paymentTermsLabel}
               options={[
-                { label: "Standard (Pay Now)", value: "" },
-                { label: "Net 15", value: "15" },
-                { label: "Net 30", value: "30" },
-                { label: "Net 45", value: "45" },
-                { label: "Net 60", value: "60" },
+                { label: t.wholesalePage.standardPayNow, value: "" },
+                { label: t.wholesalePage.net15, value: "15" },
+                { label: t.wholesalePage.net30, value: "30" },
+                { label: t.wholesalePage.net45, value: "45" },
+                { label: t.wholesalePage.net60, value: "60" },
               ]}
               value={netTerms}
               onChange={setNetTerms}
             />
 
             <Checkbox
-              label="Tax Exempt"
+              label={t.wholesalePage.taxExemptLabel}
               checked={taxExempt}
               onChange={setTaxExempt}
-              helpText="Orders from this group will be tax exempt"
+              helpText={t.wholesalePage.taxExemptHelp}
             />
           </FormLayout>
         </Modal.Section>

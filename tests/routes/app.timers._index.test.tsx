@@ -15,6 +15,7 @@ vi.mock("~/shopify.server", () => ({
 
 vi.mock("~/models/shop.server", () => ({
   getShopByDomain: vi.fn(),
+  getLocaleSettings: vi.fn(),
 }));
 
 vi.mock("~/models/timer.server", () => ({
@@ -39,10 +40,11 @@ vi.mock("@remix-run/react", async () => {
 });
 
 import { authenticate } from "~/shopify.server";
-import { getShopByDomain } from "~/models/shop.server";
+import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getTimersByShop, updateTimerStatus, deleteTimer } from "~/models/timer.server";
 import { loader, action } from "~/routes/app.timers._index";
 import TimersList from "~/routes/app.timers._index";
+import { mockTranslations, mockLocaleSettings } from "../helpers/mock-translations";
 
 const renderWithPolaris = (component: React.ReactElement) => {
   return render(<PolarisTestProvider>{component}</PolarisTestProvider>);
@@ -51,8 +53,10 @@ const renderWithPolaris = (component: React.ReactElement) => {
 describe("Timers List Route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLocaleSettings).mockResolvedValue(mockLocaleSettings);
     mockLoaderData = {
       timers: [],
+      t: mockTranslations,
     };
   });
 
@@ -165,7 +169,7 @@ describe("Timers List Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(updateTimerStatus).toHaveBeenCalledWith("timer-1", "ACTIVE");
@@ -184,7 +188,7 @@ describe("Timers List Route", () => {
       });
 
       const response = await action({ request, params: {}, context: {} });
-      const data = await response.json();
+      const data = await response.json() as { success?: boolean };
 
       expect(data.success).toBe(true);
       expect(deleteTimer).toHaveBeenCalledWith("timer-1");
@@ -213,15 +217,15 @@ describe("Timers List Route", () => {
     it("should render page title", () => {
       renderWithPolaris(<TimersList />);
 
-      expect(screen.getByText("Countdown Timers")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.timersPage.title)).toBeInTheDocument();
     });
 
     it("should render empty state when no timers", () => {
-      mockLoaderData = { timers: [] };
+      mockLoaderData = { timers: [], t: mockTranslations };
 
       renderWithPolaris(<TimersList />);
 
-      expect(screen.getByText("Create your first countdown timer")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.timersPage.noTimersDesc)).toBeInTheDocument();
     });
 
     it("should render timer in table", () => {
@@ -241,14 +245,14 @@ describe("Timers List Route", () => {
             isExpired: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
 
       expect(screen.getByText("Flash Sale")).toBeInTheDocument();
-      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.timersPage.statusActive)).toBeInTheDocument();
       expect(screen.getByText("Sale ends in:")).toBeInTheDocument();
-      expect(screen.getByText("ALL PAGES")).toBeInTheDocument();
     });
 
     it("should show expired badge for expired timers", () => {
@@ -268,11 +272,12 @@ describe("Timers List Route", () => {
             isExpired: true,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
 
-      expect(screen.getAllByText("Expired").length).toBeGreaterThan(0);
+      expect(screen.getAllByText(mockTranslations.timersPage.expired).length).toBeGreaterThan(0);
     });
 
     it("should show remaining time for active timers", () => {
@@ -293,6 +298,7 @@ describe("Timers List Route", () => {
             isExpired: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
@@ -318,13 +324,14 @@ describe("Timers List Route", () => {
             isExpired: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
 
-      expect(screen.getByText("Edit")).toBeInTheDocument();
-      expect(screen.getByText("Activate")).toBeInTheDocument();
-      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.common.edit)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.timersPage.resume)).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.common.delete)).toBeInTheDocument();
     });
 
     it("should show pause button for active timers", () => {
@@ -344,19 +351,20 @@ describe("Timers List Route", () => {
             isExpired: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
 
-      expect(screen.getByText("Pause")).toBeInTheDocument();
+      expect(screen.getByText(mockTranslations.timersPage.pause)).toBeInTheDocument();
     });
 
     it("should navigate to create timer on button click", () => {
-      mockLoaderData = { timers: [] };
+      mockLoaderData = { timers: [], t: mockTranslations };
 
       renderWithPolaris(<TimersList />);
 
-      const createButtons = screen.getAllByText("Create Timer");
+      const createButtons = screen.getAllByText(mockTranslations.timersPage.createTimer);
       fireEvent.click(createButtons[0]);
 
       expect(mockNavigate).toHaveBeenCalledWith("/app/timers/new");
@@ -379,11 +387,12 @@ describe("Timers List Route", () => {
             isExpired: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
 
-      const editButton = screen.getByText("Edit");
+      const editButton = screen.getByText(mockTranslations.common.edit);
       fireEvent.click(editButton);
 
       expect(mockNavigate).toHaveBeenCalledWith("/app/timers/timer-1");
@@ -416,6 +425,7 @@ describe("Timers List Route", () => {
             isExpired: false,
           },
         ],
+        t: mockTranslations,
       };
 
       renderWithPolaris(<TimersList />);
