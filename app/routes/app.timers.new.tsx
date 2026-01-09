@@ -28,10 +28,14 @@ import { authenticate } from "~/shopify.server";
 import { getShopByDomain } from "~/models/shop.server";
 import { createTimer } from "~/models/timer.server";
 import { getActiveRulesForSync } from "~/models/pricing-rule.server";
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
 import type { TimerShowOn } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+
+  // Check if user has access (GROWTH+ plan required)
+  await requireFeatureAccess(session.shop, "cssEditor");
 
   const shop = await getShopByDomain(session.shop);
   if (!shop) {

@@ -28,9 +28,13 @@ import { authenticate } from "~/shopify.server";
 import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { createProgressBar } from "~/models/cart-progress.server";
 import { getTranslations } from "~/i18n";
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+
+  // Check if user has access (GROWTH+ plan required)
+  await requireFeatureAccess(session.shop, "customerTags");
 
   const shop = await getShopByDomain(session.shop);
   if (!shop) {

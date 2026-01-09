@@ -28,12 +28,14 @@ import {
   CartIcon,
   GlobeIcon,
   ImportIcon,
+  LockIcon,
 } from "@shopify/polaris-icons";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 
 import { authenticate } from "~/shopify.server";
-import { getOrCreateShop, getLocaleSettings } from "~/models/shop.server";
+import { getOrCreateShop, getLocaleSettings, getPlanFeatures } from "~/models/shop.server";
 import { getTranslations } from "~/i18n";
+import type { Plan } from "@prisma/client";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -45,7 +47,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.log("[app.tsx loader] Authenticated shop:", session.shop);
 
     // Ensure shop exists in our database
-    await getOrCreateShop(session.shop, {
+    const shop = await getOrCreateShop(session.shop, {
       accessToken: session.accessToken,
     });
     console.log("[app.tsx loader] Shop record ensured");
@@ -55,9 +57,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const locale = localeSettings?.locale || "en";
     const t = getTranslations(locale);
 
+    // Get plan features for navigation gating
+    const plan = shop.plan as Plan;
+    const planFeatures = getPlanFeatures(plan);
+
     return json({
       apiKey: process.env.SHOPIFY_API_KEY || "",
       t,
+      plan,
+      planFeatures,
     });
   } catch (error) {
     console.error("[app.tsx loader] Error:", error);
@@ -80,117 +88,70 @@ function isNavItemSelected(currentPath: string, itemPath: string, exactMatch = f
 }
 
 export default function App() {
-  const { apiKey, t } = useLoaderData<typeof loader>();
+  const { apiKey, t, plan, planFeatures } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
+
+  // Helper to create nav item with optional lock for premium features
+  const createNavItem = (
+    label: string,
+    icon: typeof HomeIcon,
+    targetPath: string,
+    exactMatch = false,
+    requiredFeature?: keyof typeof planFeatures | null,
+    requiredPlan?: Plan[]
+  ) => {
+    // Check if feature is locked
+    const isLocked = requiredFeature
+      ? !planFeatures[requiredFeature]
+      : requiredPlan
+        ? !requiredPlan.includes(plan)
+        : false;
+
+    return {
+      label: isLocked ? `${label} 🔒` : label,
+      icon: isLocked ? LockIcon : icon,
+      onClick: () => {
+        if (isLocked) {
+          // Redirect to upgrade page instead
+          navigate("/app/settings?tab=billing&upgrade=true");
+        } else {
+          navigate(targetPath);
+        }
+      },
+      selected: isNavItemSelected(path, targetPath, exactMatch),
+    };
+  };
 
   const navigationMarkup = (
     <Navigation location={path}>
       <Navigation.Section
         items={[
-          {
-            label: t.nav.home,
-            icon: HomeIcon,
-            onClick: () => navigate("/app"),
-            selected: isNavItemSelected(path, "/app", true),
-          },
-          {
-            label: t.nav.pricingRules,
-            icon: ListBulletedIcon,
-            onClick: () => navigate("/app/rules/new"),
-            selected: isNavItemSelected(path, "/app/rules"),
-          },
-          {
-            label: t.nav.discounts,
-            icon: DiscountIcon,
-            onClick: () => navigate("/app/discount/new"),
-            selected: isNavItemSelected(path, "/app/discount"),
-          },
-          {
-            label: t.nav.bundles,
-            icon: CollectionIcon,
-            onClick: () => navigate("/app/bundles"),
-            selected: isNavItemSelected(path, "/app/bundles"),
-          },
-          {
-            label: t.nav.bogo || "BOGO",
-            icon: GiftCardIcon,
-            onClick: () => navigate("/app/bogo"),
-            selected: isNavItemSelected(path, "/app/bogo"),
-          },
-          {
-            label: t.nav.cartProgress || "Cart Progress",
-            icon: CartIcon,
-            onClick: () => navigate("/app/cart-progress"),
-            selected: isNavItemSelected(path, "/app/cart-progress"),
-          },
-          {
-            label: t.nav.gifts || "Gifts",
-            icon: GiftCardIcon,
-            onClick: () => navigate("/app/gifts"),
-            selected: isNavItemSelected(path, "/app/gifts"),
-          },
-          {
-            label: t.nav.timers,
-            icon: ClockIcon,
-            onClick: () => navigate("/app/timers"),
-            selected: isNavItemSelected(path, "/app/timers"),
-          },
-          {
-            label: t.nav.wholesale,
-            icon: PersonIcon,
-            onClick: () => navigate("/app/wholesale"),
-            selected: isNavItemSelected(path, "/app/wholesale"),
-          },
-          {
-            label: t.nav.abTesting,
-            icon: TargetIcon,
-            onClick: () => navigate("/app/ab-testing"),
-            selected: isNavItemSelected(path, "/app/ab-testing"),
-          },
-          {
-            label: t.nav.postPurchase,
-            icon: OrderIcon,
-            onClick: () => navigate("/app/upsells"),
-            selected: isNavItemSelected(path, "/app/upsells"),
-          },
-          {
-            label: t.nav.aiPricing,
-            icon: AutomationIcon,
-            onClick: () => navigate("/app/ai-pricing"),
-            selected: isNavItemSelected(path, "/app/ai-pricing"),
-          },
-          {
-            label: t.nav.analytics,
-            icon: ChartVerticalFilledIcon,
-            onClick: () => navigate("/app/analytics"),
-            selected: isNavItemSelected(path, "/app/analytics"),
-          },
-          {
-            label: t.nav.geoTargeting || "Geo Targeting",
-            icon: GlobeIcon,
-            onClick: () => navigate("/app/geo-targeting"),
-            selected: isNavItemSelected(path, "/app/geo-targeting"),
-          },
-          {
-            label: t.nav.importExport || "Import/Export",
-            icon: ImportIcon,
-            onClick: () => navigate("/app/import-export"),
-            selected: isNavItemSelected(path, "/app/import-export"),
-          },
-          {
-            label: t.nav.settings,
-            icon: SettingsIcon,
-            onClick: () => navigate("/app/settings"),
-            selected: isNavItemSelected(path, "/app/settings", true),
-          },
-          {
-            label: t.nav.help,
-            icon: QuestionCircleIcon,
-            onClick: () => navigate("/app/help"),
-            selected: isNavItemSelected(path, "/app/help", true),
-          },
+          // Always available
+          createNavItem(t.nav.home, HomeIcon, "/app", true),
+          createNavItem(t.nav.pricingRules, ListBulletedIcon, "/app/rules/new"),
+          createNavItem(t.nav.discounts, DiscountIcon, "/app/discount/new"),
+
+          // GROWTH+ features (unlimitedRules unlocks these)
+          createNavItem(t.nav.bundles, CollectionIcon, "/app/bundles", false, "customerTags"),
+          createNavItem(t.nav.bogo || "BOGO", GiftCardIcon, "/app/bogo", false, "customerTags"),
+          createNavItem(t.nav.cartProgress || "Cart Progress", CartIcon, "/app/cart-progress", false, "customerTags"),
+          createNavItem(t.nav.gifts || "Gifts", GiftCardIcon, "/app/gifts", false, "customerTags"),
+          createNavItem(t.nav.timers, ClockIcon, "/app/timers", false, "cssEditor"),
+          createNavItem(t.nav.wholesale, PersonIcon, "/app/wholesale", false, "customerTags"),
+          createNavItem(t.nav.abTesting, TargetIcon, "/app/ab-testing", false, "abTesting"),
+          createNavItem(t.nav.postPurchase, OrderIcon, "/app/upsells", false, "customerTags"),
+
+          // PROFESSIONAL features
+          createNavItem(t.nav.aiPricing, AutomationIcon, "/app/ai-pricing", false, "aiPricing"),
+          createNavItem(t.nav.analytics, ChartVerticalFilledIcon, "/app/analytics", false, "competitorTracking"),
+          createNavItem(t.nav.geoTargeting || "Geo Targeting", GlobeIcon, "/app/geo-targeting", false, "multiCurrency"),
+          createNavItem(t.nav.importExport || "Import/Export", ImportIcon, "/app/import-export", false, "customerTags"),
+
+          // Always available
+          createNavItem(t.nav.settings, SettingsIcon, "/app/settings", true),
+          createNavItem(t.nav.help, QuestionCircleIcon, "/app/help", true),
         ]}
       />
     </Navigation>

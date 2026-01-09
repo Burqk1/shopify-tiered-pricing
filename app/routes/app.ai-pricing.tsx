@@ -55,10 +55,14 @@ import { getTranslations } from "~/i18n";
 import { getMLModelConfig, upsertMLModelConfig } from "~/services/ml-pricing.server";
 import { getAutoApplyRules, getAutoApplyStats, createAutoApplyRule, updateAutoApplyRule } from "~/services/auto-apply.server";
 import { createABTestFromInsight, getInsightABTestResults } from "~/models/ab-test.server";
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
 import type { InsightStatus } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
+
+  // Check if user has access to AI Pricing feature (PROFESSIONAL plan required)
+  await requireFeatureAccess(session.shop, "aiPricing");
 
   const shop = await getShopByDomain(session.shop);
   if (!shop) {

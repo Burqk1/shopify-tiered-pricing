@@ -31,6 +31,7 @@ import { authenticate } from "~/shopify.server";
 import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { createGeoRule, COUNTRY_DATA } from "~/models/geo-rules.server";
 import { getTranslations } from "~/i18n";
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
 
 // Region presets
 const REGION_PRESETS: Record<string, string[]> = {
@@ -42,6 +43,9 @@ const REGION_PRESETS: Record<string, string[]> = {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+
+  // Check if user has access (PROFESSIONAL plan required for multi-currency/geo)
+  await requireFeatureAccess(session.shop, "multiCurrency");
 
   const shop = await getShopByDomain(session.shop);
   if (!shop) {

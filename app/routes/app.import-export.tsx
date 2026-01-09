@@ -53,8 +53,14 @@ const CSV_TEMPLATES = {
 "UK Pricing",GB,PERCENTAGE,5,GBP,true,ACTIVE`,
 };
 
+// Import requireFeatureAccess for plan gating
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
+
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+
+  // Check if user has access (GROWTH+ plan required)
+  await requireFeatureAccess(session.shop, "customerTags");
 
   const shop = await getShopByDomain(session.shop);
   if (!shop) {

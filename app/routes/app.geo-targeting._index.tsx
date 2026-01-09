@@ -27,6 +27,7 @@ import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getGeoRules, updateGeoRuleStatus, deleteGeoRule } from "~/models/geo-rules.server";
 import { COUNTRY_DATA } from "~/utils/country-data";
 import { getTranslations } from "~/i18n";
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
 import type { RuleStatus } from "@prisma/client";
 
 // Local type until Prisma migration
@@ -34,6 +35,9 @@ type GeoAdjustmentType = "PERCENTAGE" | "FIXED_AMOUNT" | "FIXED_PRICE" | "MULTIP
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
+
+  // Check if user has access (PROFESSIONAL plan required for multi-currency/geo)
+  await requireFeatureAccess(session.shop, "multiCurrency");
 
   const shop = await getShopByDomain(session.shop);
   if (!shop) {

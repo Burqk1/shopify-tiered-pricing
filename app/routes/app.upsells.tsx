@@ -53,10 +53,14 @@ import { authenticate } from "~/shopify.server";
 import { getShopByDomain, getLocaleSettings } from "~/models/shop.server";
 import { getUpsellOffers, getUpsellStats, createUpsellOffer, updateUpsellOffer, updateUpsellStatus, deleteUpsellOffer } from "~/models/upsell.server";
 import { getTranslations } from "~/i18n";
+import { requireFeatureAccess } from "~/utils/plan-guard.server";
 import type { DiscountType, PPTriggerType } from "@prisma/client";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
+
+  // Check if user has access (GROWTH+ plan required)
+  await requireFeatureAccess(session.shop, "customerTags");
 
   // Fetch products for selector
   const productsQuery = await admin.graphql(`
