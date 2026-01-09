@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "remix vite:build",
+    "build": "prisma generate && remix vite:build",
     "dev": "shopify app dev",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "setup": "prisma generate && prisma migrate deploy",
+    "postinstall": "prisma generate",
     "start": "remix-serve ./build/server/index.js",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
