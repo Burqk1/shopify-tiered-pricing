@@ -1,43 +1,53 @@
-# Tiered Pricing App
+# Tiered Pricing Pro
 
-Shopify mağazanız için kapsamlı fiyatlandırma ve indirim yönetim sistemi.
+Welcome to the official documentation for **Tiered Pricing Pro** - the most comprehensive pricing and discount management app for Shopify stores.
 
-## Özellikler
+## What is Tiered Pricing Pro?
 
-- **Kademeli Fiyatlandırma**: Miktar bazlı indirimler
-- **BOGO Teklifleri**: Al birini, al öbürünü kampanyaları
-- **Paketler**: Ürün bundle'ları
-- **B2B/Toptan**: Müşteri gruplarına özel fiyatlandırma
-- **AI Fiyatlandırma**: Yapay zeka destekli fiyat önerileri
-- **A/B Testleri**: Fiyat stratejilerini test edin
-- **Geo Targeting**: Bölge bazlı fiyatlandırma
-- **Ve daha fazlası...**
+Tiered Pricing Pro helps Shopify merchants increase sales and average order value through:
 
-## Hızlı Başlangıç
+- **Volume Discounts** - Encourage bulk purchases with quantity-based pricing
+- **BOGO Offers** - Buy One Get One promotions that drive conversions
+- **Product Bundles** - Sell more by grouping products together
+- **B2B/Wholesale Pricing** - Different prices for different customer groups
+- **AI-Powered Pricing** - Smart price recommendations based on data
+- **A/B Testing** - Test different pricing strategies scientifically
+- **And much more...**
 
-1. [Shopify App Store](https://apps.shopify.com)'dan uygulamayı yükleyin
-2. Mağazanıza erişim izni verin
-3. İlk fiyatlandırma kuralınızı oluşturun
+## Quick Start
 
-## Dokümantasyon
+Get started in 3 simple steps:
 
-- [Kullanıcı Kılavuzu](USER_GUIDE.md) - Tüm özelliklerin detaylı açıklaması
-- [Geliştirici Kılavuzu](DEVELOPER_GUIDE.md) - Teknik dokümantasyon
-- [API Referansı](API_REFERENCE.md) - Internal API'ler
+1. **Install** the app from Shopify App Store
+2. **Create** your first pricing rule
+3. **Activate** and watch your sales grow
 
-## Plan Seçenekleri
+{% content-ref url="getting-started/installation.md" %}
+[installation.md](getting-started/installation.md)
+{% endcontent-ref %}
 
-| Plan | Fiyat | Özellikler |
-|------|-------|------------|
-| FREE | $0/ay | 1 kural, temel özellikler |
-| GROWTH | $39.99/ay | Sınırsız kural, B2B, BOGO, A/B Test |
-| PROFESSIONAL | $89.99/ay | AI Pricing, Geo Targeting, API |
+## Features by Plan
 
-## Destek
+| Feature | FREE | GROWTH | PRO |
+|---------|------|--------|-----|
+| Pricing Rules | 1 | Unlimited | Unlimited |
+| Basic Discounts | ✅ | ✅ | ✅ |
+| BOGO Offers | ❌ | ✅ | ✅ |
+| Product Bundles | ❌ | ✅ | ✅ |
+| B2B Pricing | ❌ | ✅ | ✅ |
+| A/B Testing | ❌ | ✅ | ✅ |
+| AI Pricing | ❌ | ❌ | ✅ |
+| Geo Targeting | ❌ | ❌ | ✅ |
+| Advanced Analytics | ❌ | ❌ | ✅ |
+| Priority Support | ❌ | ❌ | ✅ |
 
-- **E-posta**: support@tieredpricing.app
-- **GitHub**: [Issues](https://github.com/your-repo/issues)
+## Need Help?
+
+- 📧 Email: support@tieredpricing.app
+- 💬 Live Chat: Available in-app
+- 📚 This documentation
 
 ---
 
-*Versiyon: 1.0.0 | Son güncelleme: Ocak 2026*
+**Current Version:** 1.0.0
+**Last Updated:** January 2026
