@@ -112,6 +112,7 @@ export default function App() {
     return {
       label: isLocked ? `${label} 🔒` : label,
       icon: isLocked ? LockIcon : icon,
+      disabled: isLocked, // Makes the item appear faded/dimmed
       onClick: () => {
         if (isLocked) {
           // Redirect to upgrade page instead
