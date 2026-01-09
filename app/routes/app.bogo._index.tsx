@@ -17,10 +17,8 @@ import {
   Badge,
   IndexTable,
   EmptyState,
-  Layout,
   Box,
-  Tooltip,
-  Icon,
+  Grid,
 } from "@shopify/polaris";
 import { useState } from "react";
 import { PlusIcon } from "@shopify/polaris-icons";
@@ -91,13 +89,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-const BOGO_TYPE_LABELS: Record<BogoType, string> = {
-  BUY_X_GET_Y_FREE: "Buy X Get Y Free",
-  BUY_X_GET_Y_PERCENT: "Buy X Get Y % Off",
-  BUY_X_GET_Y_FIXED: "Buy X Get Y $ Off",
-  SPEND_X_GET_Y: "Spend X Get Y",
-};
-
 export default function BogoList() {
   const { offers, currency, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
@@ -105,6 +96,37 @@ export default function BogoList() {
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [offerToDelete, setOfferToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Get bogoPage translations with fallback
+  const bp = t.bogoPage || {
+    title: "BOGO Offers",
+    subtitle: "Buy One Get One deals to boost sales",
+    createOffer: "Create BOGO Offer",
+    activeOffers: "Active Offers",
+    totalRedemptions: "Total Redemptions",
+    revenueLift: "Revenue Lift",
+    fromBogoSales: "from BOGO sales",
+    offerTypes: "Offer Types",
+    buyXGetYFree: "Buy X Get Y Free",
+    buyXGetYFreeDesc: "\"Buy 2, Get 1 Free\"",
+    buyXGetYPercent: "Buy X Get Y % Off",
+    buyXGetYPercentDesc: "\"Buy 1, Get 2nd 50% Off\"",
+    spendXGetY: "Spend X Get Y",
+    spendXGetYDesc: "\"Spend $50, Get Free Gift\"",
+    offer: "Offer",
+    type: "Type",
+    status: "Status",
+    buyCondition: "Buy Condition",
+    getReward: "Get Reward",
+    redemptions: "Redemptions",
+    actions: "Actions",
+    activate: "Activate",
+    pause: "Pause",
+    free: "FREE",
+    offItem: "off {item}",
+    createFirst: "Create your first BOGO offer",
+    emptyStateDesc: "BOGO (Buy One Get One) offers are proven to increase average order value and customer engagement.",
+  };
 
   const handleStatusChange = (offerId: string, status: RuleStatus) => {
     submit({ action: "updateStatus", offerId, status }, { method: "POST" });
@@ -137,13 +159,13 @@ export default function BogoList() {
   const formatBogoType = (type: BogoType, buyQty: number, getQty: number, discountValue: number) => {
     switch (type) {
       case "BUY_X_GET_Y_FREE":
-        return `Buy ${buyQty} Get ${getQty} FREE`;
+        return `${buyQty} al ${getQty} ${bp.free}`;
       case "BUY_X_GET_Y_PERCENT":
-        return `Buy ${buyQty} Get ${getQty} at ${discountValue}% OFF`;
+        return `${buyQty} al ${getQty}. %${discountValue}`;
       case "BUY_X_GET_Y_FIXED":
-        return `Buy ${buyQty} Get ${getQty} for ${currency}${discountValue}`;
+        return `${buyQty} al ${getQty}. ${currency}${discountValue}`;
       case "SPEND_X_GET_Y":
-        return `Spend ${currency}${buyQty}+ Get Free Item`;
+        return `${currency}${buyQty}+ harca`;
       default:
         return type;
     }
@@ -186,12 +208,12 @@ export default function BogoList() {
           </Button>
           {offer.status === "DRAFT" && (
             <Button size="slim" tone="success" onClick={() => handleStatusChange(offer.id, "ACTIVE")}>
-              Activate
+              {bp.activate}
             </Button>
           )}
           {offer.status === "ACTIVE" && (
             <Button size="slim" onClick={() => handleStatusChange(offer.id, "PAUSED")}>
-              Pause
+              {bp.pause}
             </Button>
           )}
           <Button size="slim" tone="critical" onClick={() => openDeleteModal(offer)}>
@@ -204,16 +226,14 @@ export default function BogoList() {
 
   const emptyState = (
     <EmptyState
-      heading="Create your first BOGO offer"
+      heading={bp.createFirst}
       action={{
-        content: "Create BOGO Offer",
+        content: bp.createOffer,
         onAction: () => navigate("/app/bogo/new"),
       }}
       image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
     >
-      <p>
-        Boost sales with "Buy One Get One" offers. Create BOGO deals, "Buy 2 Get 1 Free" promotions, and more.
-      </p>
+      <p>{bp.emptyStateDesc}</p>
     </EmptyState>
   );
 
@@ -224,68 +244,75 @@ export default function BogoList() {
 
   return (
     <Page
-      title="BOGO Offers"
-      subtitle="Buy One Get One promotions"
+      title={bp.title}
+      subtitle={bp.subtitle}
       primaryAction={{
-        content: "Create BOGO Offer",
+        content: bp.createOffer,
         icon: PlusIcon,
         onAction: () => navigate("/app/bogo/new"),
       }}
       backAction={{ content: t.nav.dashboard, url: "/app" }}
     >
       <BlockStack gap="500">
-        {/* Stats Cards */}
-        <Layout>
-          <Layout.Section variant="oneThird">
+        {/* Stats Cards - Using Grid for equal sizing */}
+        <Grid>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
             <Card>
               <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">Active Offers</Text>
-                <Text variant="headingXl" as="p">{activeOffers}</Text>
+                <Text variant="headingSm" as="h3">{bp.activeOffers}</Text>
+                <Text variant="heading2xl" as="p">{activeOffers}</Text>
               </BlockStack>
             </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
             <Card>
               <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">Orders with BOGO</Text>
-                <Text variant="headingXl" as="p">{totalOrders}</Text>
+                <Text variant="headingSm" as="h3">{bp.totalRedemptions}</Text>
+                <Text variant="heading2xl" as="p">{totalOrders}</Text>
               </BlockStack>
             </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
             <Card>
               <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">Total Discounts Given</Text>
-                <Text variant="headingXl" as="p">{currency}{totalDiscounts.toFixed(2)}</Text>
+                <Text variant="headingSm" as="h3">{bp.revenueLift}</Text>
+                <Text variant="heading2xl" as="p">{currency}{totalDiscounts.toFixed(2)}</Text>
+                <Text variant="bodySm" tone="subdued" as="span">{bp.fromBogoSales}</Text>
               </BlockStack>
             </Card>
-          </Layout.Section>
-        </Layout>
+          </Grid.Cell>
+        </Grid>
 
         {/* BOGO Types Info */}
         <Card>
           <BlockStack gap="300">
-            <Text variant="headingSm" as="h3">Available BOGO Types</Text>
-            <InlineStack gap="400" wrap>
-              <Box padding="200" background="bg-surface-secondary" borderRadius="200">
-                <BlockStack gap="100">
-                  <Text variant="bodyMd" fontWeight="semibold" as="span">Buy X Get Y Free</Text>
-                  <Text variant="bodySm" tone="subdued" as="span">e.g., Buy 2 Get 1 Free</Text>
-                </BlockStack>
-              </Box>
-              <Box padding="200" background="bg-surface-secondary" borderRadius="200">
-                <BlockStack gap="100">
-                  <Text variant="bodyMd" fontWeight="semibold" as="span">Buy X Get Y % Off</Text>
-                  <Text variant="bodySm" tone="subdued" as="span">e.g., Buy 2 Get 1 at 50% Off</Text>
-                </BlockStack>
-              </Box>
-              <Box padding="200" background="bg-surface-secondary" borderRadius="200">
-                <BlockStack gap="100">
-                  <Text variant="bodyMd" fontWeight="semibold" as="span">Spend X Get Y</Text>
-                  <Text variant="bodySm" tone="subdued" as="span">e.g., Spend $100 Get Free Gift</Text>
-                </BlockStack>
-              </Box>
-            </InlineStack>
+            <Text variant="headingSm" as="h3">{bp.offerTypes}</Text>
+            <Grid>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
+                <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                  <BlockStack gap="100">
+                    <Text variant="bodyMd" fontWeight="semibold" as="span">🎁 {bp.buyXGetYFree}</Text>
+                    <Text variant="bodySm" tone="subdued" as="span">{bp.buyXGetYFreeDesc}</Text>
+                  </BlockStack>
+                </Box>
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
+                <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                  <BlockStack gap="100">
+                    <Text variant="bodyMd" fontWeight="semibold" as="span">💰 {bp.buyXGetYPercent}</Text>
+                    <Text variant="bodySm" tone="subdued" as="span">{bp.buyXGetYPercentDesc}</Text>
+                  </BlockStack>
+                </Box>
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
+                <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                  <BlockStack gap="100">
+                    <Text variant="bodyMd" fontWeight="semibold" as="span">🛒 {bp.spendXGetY}</Text>
+                    <Text variant="bodySm" tone="subdued" as="span">{bp.spendXGetYDesc}</Text>
+                  </BlockStack>
+                </Box>
+              </Grid.Cell>
+            </Grid>
           </BlockStack>
         </Card>
 
@@ -298,12 +325,12 @@ export default function BogoList() {
               resourceName={{ singular: "BOGO offer", plural: "BOGO offers" }}
               itemCount={offers.length}
               headings={[
-                { title: "Offer" },
-                { title: "Status" },
-                { title: "Orders" },
-                { title: "Discounts Given" },
+                { title: bp.offer },
+                { title: bp.status },
+                { title: bp.redemptions },
+                { title: bp.revenueLift },
                 { title: "Stacking" },
-                { title: "Actions" },
+                { title: bp.actions },
               ]}
               selectable={false}
             >

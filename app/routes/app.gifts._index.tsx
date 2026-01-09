@@ -15,9 +15,9 @@ import {
   Badge,
   IndexTable,
   EmptyState,
-  Layout,
   Box,
   ProgressBar,
+  Grid,
 } from "@shopify/polaris";
 import { useState } from "react";
 import { PlusIcon } from "@shopify/polaris-icons";
@@ -90,13 +90,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 };
 
-const TRIGGER_TYPE_LABELS: Record<GiftTriggerType, string> = {
-  MIN_SPEND: "Minimum Spend",
-  MIN_QUANTITY: "Minimum Quantity",
-  SPECIFIC_PRODUCT: "Specific Product",
-  SPECIFIC_COLLECTION: "From Collection",
-};
-
 export default function GiftsList() {
   const { gifts, currency, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
@@ -104,6 +97,42 @@ export default function GiftsList() {
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [giftToDelete, setGiftToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Get giftsPage translations with fallback
+  const gp = t.giftsPage || {
+    title: "Gift with Purchase",
+    subtitle: "Free gifts to boost order value",
+    createGift: "Create Gift Offer",
+    activeOffers: "Active Offers",
+    totalGiftsGiven: "Total Gifts Given",
+    conversionBoost: "Conversion Boost",
+    avgIncreaseInAOV: "avg. increase in AOV",
+    howItWorks: "How it works",
+    exampleTitle: "Spend $75 more to get a FREE Tote Bag!",
+    exampleProgress: "You're 60% there!",
+    triggerTypes: "Trigger Types",
+    minSpend: "Minimum Spend",
+    minSpendDesc: "\"Spend $100, get free gift\"",
+    minQuantity: "Minimum Quantity",
+    minQuantityDesc: "\"Buy 5 items, get free gift\"",
+    specificProduct: "Specific Product",
+    specificProductDesc: "\"Buy X, get Y free\"",
+    offer: "Offer",
+    status: "Status",
+    gift: "Gift",
+    usage: "Usage",
+    features: "Features",
+    actions: "Actions",
+    given: "given",
+    ofMax: "of {max} max",
+    autoAdd: "Auto-add",
+    progressBar: "Progress Bar",
+    activate: "Activate",
+    pause: "Pause",
+    createFirst: "Create your first Gift with Purchase",
+    emptyStateDesc: "Increase average order value by offering free gifts when customers reach spending thresholds.",
+    off: "off",
+  };
 
   const handleStatusChange = (giftId: string, status: RuleStatus) => {
     submit({ action: "updateStatus", giftId, status }, { method: "POST" });
@@ -136,11 +165,11 @@ export default function GiftsList() {
   const formatTrigger = (type: GiftTriggerType, value: number) => {
     switch (type) {
       case "MIN_SPEND":
-        return `Spend ${currency}${value}+`;
+        return `${currency}${value}+`;
       case "MIN_QUANTITY":
-        return `Buy ${value}+ items`;
+        return `${value}+`;
       default:
-        return TRIGGER_TYPE_LABELS[type];
+        return type;
     }
   };
 
@@ -159,30 +188,30 @@ export default function GiftsList() {
       <IndexTable.Cell>{getStatusBadge(gift.status as RuleStatus)}</IndexTable.Cell>
       <IndexTable.Cell>
         <Text variant="bodyMd" as="span">
-          {gift.giftTitle || "Gift Product"}
+          {gift.giftTitle || gp.gift}
         </Text>
         {gift.giftDiscountPercent < 100 && (
           <Text variant="bodySm" tone="subdued" as="span">
-            {" "}({gift.giftDiscountPercent}% off)
+            {" "}({gift.giftDiscountPercent}% {gp.off})
           </Text>
         )}
       </IndexTable.Cell>
       <IndexTable.Cell>
         <BlockStack gap="100">
           <Text variant="bodyMd" as="span">
-            {gift.givenCount} given
+            {gift.givenCount} {gp.given}
           </Text>
           {gift.maxTotal && (
             <Text variant="bodySm" tone="subdued" as="span">
-              of {gift.maxTotal} max
+              max {gift.maxTotal}
             </Text>
           )}
         </BlockStack>
       </IndexTable.Cell>
       <IndexTable.Cell>
         <InlineStack gap="100">
-          {gift.autoAddToCart && <Badge tone="success">Auto-add</Badge>}
-          {gift.showProgressBar && <Badge>Progress Bar</Badge>}
+          {gift.autoAddToCart && <Badge tone="success">{gp.autoAdd}</Badge>}
+          {gift.showProgressBar && <Badge>{gp.progressBar}</Badge>}
         </InlineStack>
       </IndexTable.Cell>
       <IndexTable.Cell>
@@ -192,12 +221,12 @@ export default function GiftsList() {
           </Button>
           {gift.status === "DRAFT" && (
             <Button size="slim" tone="success" onClick={() => handleStatusChange(gift.id, "ACTIVE")}>
-              Activate
+              {gp.activate}
             </Button>
           )}
           {gift.status === "ACTIVE" && (
             <Button size="slim" onClick={() => handleStatusChange(gift.id, "PAUSED")}>
-              Pause
+              {gp.pause}
             </Button>
           )}
           <Button size="slim" tone="critical" onClick={() => openDeleteModal(gift)}>
@@ -210,16 +239,14 @@ export default function GiftsList() {
 
   const emptyState = (
     <EmptyState
-      heading="Create your first Gift with Purchase"
+      heading={gp.createFirst}
       action={{
-        content: "Create Gift Offer",
+        content: gp.createGift,
         onAction: () => navigate("/app/gifts/new"),
       }}
       image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
     >
-      <p>
-        Increase average order value by offering free gifts when customers reach spending thresholds.
-      </p>
+      <p>{gp.emptyStateDesc}</p>
     </EmptyState>
   );
 
@@ -229,10 +256,10 @@ export default function GiftsList() {
 
   return (
     <Page
-      title="Gift with Purchase"
-      subtitle="Free gifts to boost order value"
+      title={gp.title}
+      subtitle={gp.subtitle}
       primaryAction={{
-        content: "Create Gift Offer",
+        content: gp.createGift,
         icon: PlusIcon,
         onAction: () => navigate("/app/gifts/new"),
       }}
@@ -242,74 +269,80 @@ export default function GiftsList() {
         {/* Example Banner */}
         <Card>
           <BlockStack gap="300">
-            <Text variant="headingSm" as="h3">How it works</Text>
+            <Text variant="headingSm" as="h3">{gp.howItWorks}</Text>
             <Box padding="400" background="bg-surface-success" borderRadius="200">
               <BlockStack gap="200">
                 <Text variant="headingMd" as="p" alignment="center">
-                  🎁 Spend $75 more to get a FREE Tote Bag!
+                  🎁 {gp.exampleTitle}
                 </Text>
                 <ProgressBar progress={60} size="small" tone="success" />
                 <Text variant="bodySm" tone="subdued" as="p" alignment="center">
-                  You're 60% there!
+                  {gp.exampleProgress}
                 </Text>
               </BlockStack>
             </Box>
           </BlockStack>
         </Card>
 
-        {/* Stats Cards */}
-        <Layout>
-          <Layout.Section variant="oneThird">
+        {/* Stats Cards - Using Grid for equal sizing */}
+        <Grid>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
             <Card>
               <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">Active Offers</Text>
-                <Text variant="headingXl" as="p">{activeGifts}</Text>
+                <Text variant="headingSm" as="h3">{gp.activeOffers}</Text>
+                <Text variant="heading2xl" as="p">{activeGifts}</Text>
               </BlockStack>
             </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
             <Card>
               <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">Total Gifts Given</Text>
-                <Text variant="headingXl" as="p">{totalGiven}</Text>
+                <Text variant="headingSm" as="h3">{gp.totalGiftsGiven}</Text>
+                <Text variant="heading2xl" as="p">{totalGiven}</Text>
               </BlockStack>
             </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
+          </Grid.Cell>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
             <Card>
               <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">Conversion Boost</Text>
-                <Text variant="headingXl" as="p" tone="success">+18%</Text>
-                <Text variant="bodySm" tone="subdued" as="span">avg. increase in AOV</Text>
+                <Text variant="headingSm" as="h3">{gp.conversionBoost}</Text>
+                <Text variant="heading2xl" as="p" tone="success">+18%</Text>
+                <Text variant="bodySm" tone="subdued" as="span">{gp.avgIncreaseInAOV}</Text>
               </BlockStack>
             </Card>
-          </Layout.Section>
-        </Layout>
+          </Grid.Cell>
+        </Grid>
 
         {/* Trigger Types */}
         <Card>
           <BlockStack gap="300">
-            <Text variant="headingSm" as="h3">Trigger Types</Text>
-            <InlineStack gap="400" wrap>
-              <Box padding="300" background="bg-surface-secondary" borderRadius="200">
-                <BlockStack gap="100">
-                  <Text variant="bodyMd" fontWeight="semibold" as="span">💰 Minimum Spend</Text>
-                  <Text variant="bodySm" tone="subdued" as="span">"Spend $100, get free gift"</Text>
-                </BlockStack>
-              </Box>
-              <Box padding="300" background="bg-surface-secondary" borderRadius="200">
-                <BlockStack gap="100">
-                  <Text variant="bodyMd" fontWeight="semibold" as="span">📦 Minimum Quantity</Text>
-                  <Text variant="bodySm" tone="subdued" as="span">"Buy 5 items, get free gift"</Text>
-                </BlockStack>
-              </Box>
-              <Box padding="300" background="bg-surface-secondary" borderRadius="200">
-                <BlockStack gap="100">
-                  <Text variant="bodyMd" fontWeight="semibold" as="span">🎯 Specific Product</Text>
-                  <Text variant="bodySm" tone="subdued" as="span">"Buy X, get Y free"</Text>
-                </BlockStack>
-              </Box>
-            </InlineStack>
+            <Text variant="headingSm" as="h3">{gp.triggerTypes}</Text>
+            <Grid>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
+                <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                  <BlockStack gap="100">
+                    <Text variant="bodyMd" fontWeight="semibold" as="span">💰 {gp.minSpend}</Text>
+                    <Text variant="bodySm" tone="subdued" as="span">{gp.minSpendDesc}</Text>
+                  </BlockStack>
+                </Box>
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
+                <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                  <BlockStack gap="100">
+                    <Text variant="bodyMd" fontWeight="semibold" as="span">📦 {gp.minQuantity}</Text>
+                    <Text variant="bodySm" tone="subdued" as="span">{gp.minQuantityDesc}</Text>
+                  </BlockStack>
+                </Box>
+              </Grid.Cell>
+              <Grid.Cell columnSpan={{ xs: 6, sm: 2, md: 2, lg: 4, xl: 4 }}>
+                <Box padding="300" background="bg-surface-secondary" borderRadius="200">
+                  <BlockStack gap="100">
+                    <Text variant="bodyMd" fontWeight="semibold" as="span">🎯 {gp.specificProduct}</Text>
+                    <Text variant="bodySm" tone="subdued" as="span">{gp.specificProductDesc}</Text>
+                  </BlockStack>
+                </Box>
+              </Grid.Cell>
+            </Grid>
           </BlockStack>
         </Card>
 
@@ -322,12 +355,12 @@ export default function GiftsList() {
               resourceName={{ singular: "gift offer", plural: "gift offers" }}
               itemCount={gifts.length}
               headings={[
-                { title: "Offer" },
-                { title: "Status" },
-                { title: "Gift" },
-                { title: "Usage" },
-                { title: "Features" },
-                { title: "Actions" },
+                { title: gp.offer },
+                { title: gp.status },
+                { title: gp.gift },
+                { title: gp.usage },
+                { title: gp.features },
+                { title: gp.actions },
               ]}
               selectable={false}
             >
