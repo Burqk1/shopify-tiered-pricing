@@ -193,6 +193,9 @@ export function getPlanFeatures(plan: Plan): {
   prioritySupport: boolean;
   multiCurrency: boolean;
   posIntegration: boolean;
+  aiPricing: boolean;
+  abTesting: boolean;
+  competitorTracking: boolean;
 } {
   switch (plan) {
     case "FREE":
@@ -203,6 +206,9 @@ export function getPlanFeatures(plan: Plan): {
         prioritySupport: false,
         multiCurrency: false,
         posIntegration: true, // POS available on all plans
+        aiPricing: false,
+        abTesting: false,
+        competitorTracking: false,
       };
     case "GROWTH":
       return {
@@ -212,6 +218,9 @@ export function getPlanFeatures(plan: Plan): {
         prioritySupport: false,
         multiCurrency: false,
         posIntegration: true,
+        aiPricing: false,
+        abTesting: true,
+        competitorTracking: false,
       };
     case "PROFESSIONAL":
       return {
@@ -221,6 +230,9 @@ export function getPlanFeatures(plan: Plan): {
         prioritySupport: true,
         multiCurrency: true,
         posIntegration: true,
+        aiPricing: true,
+        abTesting: true,
+        competitorTracking: true,
       };
   }
 }

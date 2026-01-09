@@ -159,6 +159,9 @@ export const mockTranslations = {
     lastSynced: "Last Synced",
     conditions: "conditions",
     tiers: "tiers",
+    activateRule: "Activate",
+    pauseRule: "Pause",
+    syncRule: "Sync to Storefront",
   },
   analyticsPage: {
     title: "Analytics Dashboard",

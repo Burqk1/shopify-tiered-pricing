@@ -1,10 +1,12 @@
 /**
  * Dashboard Route (app._index.tsx)
  *
- * Main dashboard showing:
- * - Overview stats
+ * Enhanced main dashboard showing:
+ * - Overview stats with visual metrics
+ * - Quick action widgets
+ * - Feature shortcuts
  * - List of pricing rules
- * - Quick actions
+ * - Getting started guide
  */
 
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
@@ -23,9 +25,28 @@ import {
   useIndexResourceState,
   EmptyState,
   Banner,
+  Box,
+  Grid,
+  Icon,
+  ProgressBar,
+  Tooltip,
+  Divider,
 } from "@shopify/polaris";
 import { useState } from "react";
-import { PlusIcon, RefreshIcon } from "@shopify/polaris-icons";
+import {
+  PlusIcon,
+  RefreshIcon,
+  ChartVerticalFilledIcon,
+  DiscountIcon,
+  CartIcon,
+  ClockIcon,
+  GiftCardIcon,
+  PersonIcon,
+  TargetIcon,
+  CheckCircleIcon,
+  ArrowRightIcon,
+  StarFilledIcon,
+} from "@shopify/polaris-icons";
 
 import { authenticate } from "~/shopify.server";
 import { DeleteConfirmModal } from "~/components/DeleteConfirmModal";
@@ -55,6 +76,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const locale = localeSettings?.locale || "en";
   const t = getTranslations(locale);
 
+  // Calculate quick stats
+  const activeRules = shopData.rules.filter((r) => r.status === "ACTIVE").length;
+  const draftRules = shopData.rules.filter((r) => r.status === "DRAFT").length;
+  const syncedRules = shopData.rules.filter((r) => r.syncedAt !== null).length;
+
+  // Check if user has completed setup steps
+  const hasRules = shopData.rules.length > 0;
+  const hasActiveRules = activeRules > 0;
+  const hasSyncedRules = syncedRules > 0;
+  const setupProgress = [hasRules, hasSyncedRules, hasActiveRules].filter(Boolean).length;
+
   return json({
     shop: {
       domain: session.shop,
@@ -80,6 +112,15 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         : 100,
       lastSync: syncStats.lastSync?.toISOString(),
     },
+    quickStats: {
+      totalRules: shopData.rules.length,
+      activeRules,
+      draftRules,
+      syncedRules,
+    },
+    setupProgress,
+    isSetupComplete: setupProgress === 3,
+    planFeatures,
     t,
   });
 };
@@ -124,7 +165,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Dashboard() {
-  const { shop, rules, canCreate, syncStats, t } = useLoaderData<typeof loader>();
+  const { shop, rules, canCreate, syncStats, quickStats, setupProgress, isSetupComplete, planFeatures, t } = useLoaderData<typeof loader>();
   const navigate = useNavigate();
   const submit = useSubmit();
 
@@ -174,6 +215,16 @@ export default function Dashboard() {
     const config = statusConfig[status];
     return <Badge tone={config.tone}>{config.label}</Badge>;
   };
+
+  // Quick action widgets
+  const quickActions = [
+    { icon: DiscountIcon, label: "Volume Discount", url: "/app/rules/new", description: "Create tiered pricing" },
+    { icon: GiftCardIcon, label: "BOGO Offer", url: "/app/bogo/new", description: "Buy X Get Y" },
+    { icon: CartIcon, label: "Free Shipping", url: "/app/cart-progress/new", description: "Cart progress bar" },
+    { icon: ClockIcon, label: "Timer", url: "/app/timers/new", description: "Countdown urgency" },
+    { icon: TargetIcon, label: "Bundle", url: "/app/bundles/new", description: "Product bundles" },
+    { icon: PersonIcon, label: "Wholesale", url: "/app/wholesale", description: "B2B pricing" },
+  ];
 
   const rowMarkup = rules.map((rule, index) => (
     <IndexTable.Row
@@ -243,6 +294,10 @@ export default function Dashboard() {
         content: t.rules.createRule,
         onAction: () => navigate("/app/rules/new"),
       }}
+      secondaryAction={{
+        content: "Setup Guide",
+        onAction: () => navigate("/app/setup"),
+      }}
       image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
     >
       <p>{t.dashboard.createFirstRuleDesc}</p>
@@ -267,6 +322,45 @@ export default function Dashboard() {
       ]}
     >
       <BlockStack gap="500">
+        {/* Setup Progress Banner - Show only if not complete */}
+        {!isSetupComplete && (
+          <Card>
+            <BlockStack gap="300">
+              <InlineStack align="space-between" blockAlign="center">
+                <BlockStack gap="100">
+                  <Text variant="headingSm" as="h3">
+                    {t.dashboard.gettingStarted}
+                  </Text>
+                  <Text variant="bodySm" tone="subdued" as="span">
+                    {setupProgress} of 3 steps completed
+                  </Text>
+                </BlockStack>
+                <Button variant="plain" onClick={() => navigate("/app/setup")}>
+                  View Setup Guide
+                </Button>
+              </InlineStack>
+              <ProgressBar progress={(setupProgress / 3) * 100} tone="primary" size="small" />
+              <InlineStack gap="300">
+                <Tooltip content="Create your first pricing rule">
+                  <Badge tone={quickStats.totalRules > 0 ? "success" : "attention"}>
+                    {`${quickStats.totalRules > 0 ? "✓" : "1"} Create Rule`}
+                  </Badge>
+                </Tooltip>
+                <Tooltip content="Sync rules to your storefront">
+                  <Badge tone={quickStats.syncedRules > 0 ? "success" : "attention"}>
+                    {`${quickStats.syncedRules > 0 ? "✓" : "2"} Sync`}
+                  </Badge>
+                </Tooltip>
+                <Tooltip content="Activate at least one rule">
+                  <Badge tone={quickStats.activeRules > 0 ? "success" : "attention"}>
+                    {`${quickStats.activeRules > 0 ? "✓" : "3"} Activate`}
+                  </Badge>
+                </Tooltip>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        )}
+
         {!canCreate && (
           <Banner
             title={t.dashboard.ruleLimit}
@@ -277,58 +371,134 @@ export default function Dashboard() {
           </Banner>
         )}
 
-        {/* Stats Cards */}
-        <Layout>
-          <Layout.Section variant="oneThird">
+        {/* Enhanced Stats Cards */}
+        <Grid>
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
             <Card>
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">
-                  {t.rules.title}
-                </Text>
-                <Text variant="headingXl" as="p">
-                  {rules.length}
-                  {shop.ruleLimit !== "unlimited" && (
-                    <Text variant="bodySm" tone="subdued" as="span">
-                      {" "}
-                      / {shop.ruleLimit}
-                    </Text>
-                  )}
-                </Text>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <Card>
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">
-                  {t.dashboard.activeRules}
-                </Text>
-                <Text variant="headingXl" as="p">
-                  {rules.filter((r) => r.status === "ACTIVE").length}
-                </Text>
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-          <Layout.Section variant="oneThird">
-            <Card>
-              <BlockStack gap="200">
-                <Text variant="headingSm" as="h3">
-                  {t.settings.syncStatistics}
-                </Text>
-                <InlineStack gap="200" align="start">
-                  <Badge tone={syncStats.successRate >= 90 ? "success" : "warning"}>
-                    {`${syncStats.successRate}% ${t.settings.successRate.toLowerCase()}`}
-                  </Badge>
-                  {syncStats.lastSync && (
-                    <Text variant="bodySm" tone="subdued" as="span">
-                      {t.settings.lastSync}: {new Date(syncStats.lastSync).toLocaleDateString()}
-                    </Text>
-                  )}
+              <BlockStack gap="300">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingSm" as="h3">{t.rules.title}</Text>
+                  <Box background="bg-fill-info" borderRadius="full" padding="100">
+                    <Icon source={DiscountIcon} tone="info" />
+                  </Box>
                 </InlineStack>
+                <Text variant="heading2xl" as="p">
+                  {quickStats.totalRules}
+                  {shop.ruleLimit !== "unlimited" && (
+                    <Text variant="bodySm" tone="subdued" as="span"> / {shop.ruleLimit}</Text>
+                  )}
+                </Text>
+                {shop.ruleLimit !== "unlimited" && (
+                  <ProgressBar
+                    progress={(quickStats.totalRules / Number(shop.ruleLimit)) * 100}
+                    tone="primary"
+                    size="small"
+                  />
+                )}
               </BlockStack>
             </Card>
-          </Layout.Section>
-        </Layout>
+          </Grid.Cell>
+
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingSm" as="h3">{t.dashboard.activeRules}</Text>
+                  <Box background="bg-fill-success" borderRadius="full" padding="100">
+                    <Icon source={CheckCircleIcon} tone="success" />
+                  </Box>
+                </InlineStack>
+                <Text variant="heading2xl" as="p" tone="success">
+                  {quickStats.activeRules}
+                </Text>
+                {quickStats.draftRules > 0 && (
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    {quickStats.draftRules} draft{quickStats.draftRules > 1 ? "s" : ""} pending
+                  </Text>
+                )}
+              </BlockStack>
+            </Card>
+          </Grid.Cell>
+
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingSm" as="h3">{t.settings.syncStatistics}</Text>
+                  <Box background={syncStats.successRate >= 90 ? "bg-fill-success" : "bg-fill-warning"} borderRadius="full" padding="100">
+                    <Icon source={RefreshIcon} tone={syncStats.successRate >= 90 ? "success" : "warning"} />
+                  </Box>
+                </InlineStack>
+                <Text variant="heading2xl" as="p" tone={syncStats.successRate >= 90 ? "success" : "caution"}>
+                  {syncStats.successRate}%
+                </Text>
+                {syncStats.lastSync && (
+                  <Text variant="bodySm" tone="subdued" as="p">
+                    Last: {new Date(syncStats.lastSync).toLocaleDateString()}
+                  </Text>
+                )}
+              </BlockStack>
+            </Card>
+          </Grid.Cell>
+
+          <Grid.Cell columnSpan={{ xs: 6, sm: 3, md: 3, lg: 3, xl: 3 }}>
+            <Card>
+              <BlockStack gap="300">
+                <InlineStack align="space-between" blockAlign="center">
+                  <Text variant="headingSm" as="h3">{t.settings.currentPlan}</Text>
+                  <Box background="bg-fill-magic" borderRadius="full" padding="100">
+                    <Icon source={StarFilledIcon} tone="magic" />
+                  </Box>
+                </InlineStack>
+                <Text variant="heading2xl" as="p">
+                  {shop.plan}
+                </Text>
+                <Button variant="plain" onClick={() => navigate("/app/settings")} icon={ArrowRightIcon}>
+                  {shop.plan === "FREE" ? "Upgrade" : "Manage"}
+                </Button>
+              </BlockStack>
+            </Card>
+          </Grid.Cell>
+        </Grid>
+
+        {/* Quick Actions Widget */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack align="space-between" blockAlign="center">
+              <Text variant="headingMd" as="h3">{t.dashboard.quickActions}</Text>
+              <Button variant="plain" onClick={() => navigate("/app/setup")}>
+                All Features
+              </Button>
+            </InlineStack>
+            <Grid>
+              {quickActions.map((action, i) => (
+                <Grid.Cell key={i} columnSpan={{ xs: 3, sm: 2, md: 2, lg: 2, xl: 2 }}>
+                  <Box
+                    padding="300"
+                    background="bg-surface-secondary"
+                    borderRadius="200"
+                    borderWidth="025"
+                    borderColor="border"
+                  >
+                    <BlockStack gap="200" inlineAlign="center">
+                      <Button
+                        variant="plain"
+                        onClick={() => navigate(action.url)}
+                        icon={action.icon}
+                      />
+                      <Text variant="bodySm" as="p" fontWeight="semibold" alignment="center">
+                        {action.label}
+                      </Text>
+                      <Text variant="bodySm" as="p" tone="subdued" alignment="center">
+                        {action.description}
+                      </Text>
+                    </BlockStack>
+                  </Box>
+                </Grid.Cell>
+              ))}
+            </Grid>
+          </BlockStack>
+        </Card>
 
         {/* Rules Table */}
         <Card padding="0">
@@ -357,24 +527,17 @@ export default function Dashboard() {
           )}
         </Card>
 
-        {/* Plan Info */}
-        <Card>
-          <BlockStack gap="200">
-            <InlineStack align="space-between">
-              <Text variant="headingSm" as="h3">
-                {t.settings.currentPlan}: {shop.plan}
-              </Text>
-              <Button variant="plain" url="/app/settings">
-                {t.settings.title}
-              </Button>
-            </InlineStack>
-            <Text variant="bodySm" tone="subdued" as="p">
-              {shop.ruleLimit === "unlimited"
-                ? t.dashboard.unlimited + " " + t.rules.title.toLowerCase()
-                : `${shop.ruleLimit} ${t.rules.title.toLowerCase()}`}
-            </Text>
-          </BlockStack>
-        </Card>
+        {/* Feature Access Banner - Show for FREE plan */}
+        {shop.plan === "FREE" && (
+          <Banner
+            title="Unlock Premium Features"
+            action={{ content: "Upgrade Now", url: "/app/settings" }}
+            secondaryAction={{ content: "Compare Plans", url: "/app/settings" }}
+            tone="info"
+          >
+            <p>Get AI-powered pricing suggestions, A/B testing, competitor tracking, and more with Growth or Professional plans.</p>
+          </Banner>
+        )}
       </BlockStack>
 
       {/* Delete Confirmation Modal */}

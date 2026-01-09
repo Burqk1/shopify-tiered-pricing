@@ -128,6 +128,9 @@ describe("Dashboard Route", () => {
         prioritySupport: false,
         multiCurrency: false,
         posIntegration: true,
+        aiPricing: false,
+        abTesting: true,
+        competitorTracking: false,
       });
 
       const request = new Request("http://localhost/app");
