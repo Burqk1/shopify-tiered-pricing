@@ -188,9 +188,11 @@ model SyncLog {
 }
 
 enum SyncStatus {
+  NEVER_RUN
   SUCCESS
   FAILED
   PARTIAL // Some rules synced, some failed
+  IN_PROGRESS
 }
 
 // ============================================================================
@@ -797,6 +799,63 @@ enum FetchFrequency {
   DAILY
   WEEKLY
   MONTHLY
+}
+
+// ============================================================================
+// COMPETITOR SYNC SETTINGS - Configuration for automated competitor price sync
+// ============================================================================
+
+model CompetitorSyncSettings {
+  id            String        @id @default(uuid())
+  shopId        String        @unique
+
+  // API Configuration
+  provider      CompetitorSyncProvider @default(CUSTOM)
+  apiKey        String?               // Encrypted API key
+  apiSecret     String?               // Encrypted API secret
+  apiEndpoint   String?               // Custom API endpoint
+
+  // Sync Settings
+  enabled       Boolean       @default(false)
+  syncFrequency FetchFrequency @default(DAILY)
+  lastSyncAt    DateTime?
+  nextSyncAt    DateTime?
+
+  // Sync Scope
+  syncAllProducts     Boolean   @default(false)
+  syncProductIds      String[]  @default([])
+  syncCollectionIds   String[]  @default([])
+
+  // Auto-apply Settings
+  autoApplyRules      Boolean   @default(false)
+  priceMatchEnabled   Boolean   @default(false)
+  priceBeatPercent    Decimal?  @db.Decimal(5, 2)  // e.g., 5.00 = beat by 5%
+  minMarginPercent    Decimal?  @db.Decimal(5, 2)  // Don't go below this margin
+
+  // Notifications
+  notifyOnPriceChange Boolean   @default(true)
+  notifyEmail         String?
+  priceChangeThreshold Decimal? @db.Decimal(5, 2)  // Alert if price changes more than X%
+
+  // Statistics
+  totalProductsSynced Int       @default(0)
+  totalSyncs          Int       @default(0)
+  lastSyncStatus      SyncStatus @default(NEVER_RUN)
+  lastSyncError       String?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([shopId])
+  @@index([enabled, nextSyncAt])
+}
+
+enum CompetitorSyncProvider {
+  PRISYNC
+  COMPETERA
+  GOOGLE_SHOPPING
+  AMAZON
+  CUSTOM
 }
 
 // ============================================================================

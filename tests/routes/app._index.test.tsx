@@ -79,6 +79,25 @@ describe("Dashboard Route", () => {
         successRate: 90,
         lastSync: "2024-01-15T10:00:00Z",
       },
+      quickStats: {
+        totalRules: 0,
+        activeRules: 0,
+        draftRules: 0,
+        syncedRules: 0,
+      },
+      setupProgress: 0,
+      isSetupComplete: false,
+      planFeatures: {
+        ruleLimit: 1,
+        customerTags: false,
+        cssEditor: false,
+        prioritySupport: false,
+        multiCurrency: false,
+        posIntegration: false,
+        aiPricing: false,
+        abTesting: false,
+        competitorTracking: false,
+      },
       t: mockTranslations,
     };
   });
@@ -311,6 +330,10 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 10, successRate: 90, lastSync: null },
+        quickStats: { totalRules: 2, activeRules: 1, draftRules: 1, syncedRules: 0 },
+        setupProgress: 1,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: 1, customerTags: false, cssEditor: false, prioritySupport: false, multiCurrency: false, posIntegration: false, aiPricing: false, abTesting: false, competitorTracking: false },
         t: mockTranslations,
       };
 
@@ -326,6 +349,10 @@ describe("Dashboard Route", () => {
         rules: [],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        quickStats: { totalRules: 0, activeRules: 0, draftRules: 0, syncedRules: 0 },
+        setupProgress: 0,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: 1, customerTags: false, cssEditor: false, prioritySupport: false, multiCurrency: false, posIntegration: false, aiPricing: false, abTesting: false, competitorTracking: false },
         t: mockTranslations,
       };
 
@@ -351,6 +378,10 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 5, successRate: 100, lastSync: "2024-01-15T10:00:00Z" },
+        quickStats: { totalRules: 1, activeRules: 1, draftRules: 0, syncedRules: 1 },
+        setupProgress: 3,
+        isSetupComplete: true,
+        planFeatures: { ruleLimit: "unlimited", customerTags: true, cssEditor: true, prioritySupport: false, multiCurrency: false, posIntegration: true, aiPricing: false, abTesting: true, competitorTracking: false },
         t: mockTranslations,
       };
 
@@ -366,6 +397,10 @@ describe("Dashboard Route", () => {
         rules: [{ id: "rule-1", name: "Rule 1", status: "ACTIVE" }],
         canCreate: false,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        quickStats: { totalRules: 1, activeRules: 1, draftRules: 0, syncedRules: 0 },
+        setupProgress: 1,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: 1, customerTags: false, cssEditor: false, prioritySupport: false, multiCurrency: false, posIntegration: false, aiPricing: false, abTesting: false, competitorTracking: false },
         t: mockTranslations,
       };
 
@@ -391,6 +426,10 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 5, successRate: 80, lastSync: null },
+        quickStats: { totalRules: 1, activeRules: 1, draftRules: 0, syncedRules: 0 },
+        setupProgress: 2,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: "unlimited", customerTags: true, cssEditor: true, prioritySupport: false, multiCurrency: false, posIntegration: true, aiPricing: false, abTesting: true, competitorTracking: false },
         t: mockTranslations,
       };
 
@@ -416,6 +455,10 @@ describe("Dashboard Route", () => {
         ],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        quickStats: { totalRules: 1, activeRules: 0, draftRules: 1, syncedRules: 0 },
+        setupProgress: 1,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: "unlimited", customerTags: true, cssEditor: true, prioritySupport: false, multiCurrency: false, posIntegration: true, aiPricing: false, abTesting: true, competitorTracking: false },
         t: mockTranslations,
       };
 
@@ -430,6 +473,10 @@ describe("Dashboard Route", () => {
         rules: [],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        quickStats: { totalRules: 0, activeRules: 0, draftRules: 0, syncedRules: 0 },
+        setupProgress: 0,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: "unlimited", customerTags: true, cssEditor: true, prioritySupport: true, multiCurrency: true, posIntegration: true, aiPricing: true, abTesting: true, competitorTracking: true },
         t: mockTranslations,
       };
 
@@ -444,6 +491,10 @@ describe("Dashboard Route", () => {
         rules: [],
         canCreate: true,
         syncStats: { totalSyncs: 0, successRate: 100, lastSync: null },
+        quickStats: { totalRules: 0, activeRules: 0, draftRules: 0, syncedRules: 0 },
+        setupProgress: 0,
+        isSetupComplete: false,
+        planFeatures: { ruleLimit: "unlimited", customerTags: true, cssEditor: true, prioritySupport: false, multiCurrency: false, posIntegration: true, aiPricing: false, abTesting: true, competitorTracking: false },
         t: mockTranslations,
       };
 

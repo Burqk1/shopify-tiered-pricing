@@ -471,21 +471,155 @@ export async function syncFromGoogleShopping(
 
 /**
  * Get competitor sync settings for a shop
- * TODO: Add CompetitorSyncSettings table to schema for persistent configuration
  */
 export async function getCompetitorSyncSettings(shopId: string): Promise<CompetitorApiConfig | null> {
-  // Check if shop exists
-  const shop = await prisma.shop.findUnique({
-    where: { id: shopId },
-    select: { id: true },
+  const settings = await prisma.competitorSyncSettings.findUnique({
+    where: { shopId },
   });
 
-  if (!shop) return null;
+  if (!settings || !settings.enabled) return null;
 
-  // For now, competitor sync settings should be stored elsewhere
-  // or passed directly to sync functions
-  // This is a placeholder that returns null until proper settings table is added
-  return null;
+  // Map provider enum to config provider string
+  const providerMap: Record<string, string> = {
+    PRISYNC: "prisync",
+    COMPETERA: "competera",
+    GOOGLE_SHOPPING: "google",
+    AMAZON: "amazon",
+    CUSTOM: "custom",
+  };
+
+  return {
+    provider: providerMap[settings.provider] || "custom",
+    apiKey: settings.apiKey || "",
+    apiUrl: settings.apiEndpoint || undefined,
+    enabled: settings.enabled,
+  };
+}
+
+/**
+ * Update competitor sync settings
+ */
+export async function updateCompetitorSyncSettings(
+  shopId: string,
+  data: {
+    provider?: string;
+    apiKey?: string;
+    apiSecret?: string;
+    apiEndpoint?: string;
+    enabled?: boolean;
+    syncFrequency?: string;
+    syncAllProducts?: boolean;
+    syncProductIds?: string[];
+    autoApplyRules?: boolean;
+    priceMatchEnabled?: boolean;
+    priceBeatPercent?: number;
+    minMarginPercent?: number;
+    notifyOnPriceChange?: boolean;
+    notifyEmail?: string;
+    priceChangeThreshold?: number;
+  }
+) {
+  // Map provider string to enum
+  const providerEnumMap: Record<string, any> = {
+    prisync: "PRISYNC",
+    competera: "COMPETERA",
+    google: "GOOGLE_SHOPPING",
+    amazon: "AMAZON",
+    custom: "CUSTOM",
+  };
+
+  const frequencyEnumMap: Record<string, any> = {
+    hourly: "HOURLY",
+    daily: "DAILY",
+    weekly: "WEEKLY",
+    monthly: "MONTHLY",
+  };
+
+  return prisma.competitorSyncSettings.upsert({
+    where: { shopId },
+    update: {
+      provider: data.provider ? providerEnumMap[data.provider] : undefined,
+      apiKey: data.apiKey,
+      apiSecret: data.apiSecret,
+      apiEndpoint: data.apiEndpoint,
+      enabled: data.enabled,
+      syncFrequency: data.syncFrequency ? frequencyEnumMap[data.syncFrequency] : undefined,
+      syncAllProducts: data.syncAllProducts,
+      syncProductIds: data.syncProductIds,
+      autoApplyRules: data.autoApplyRules,
+      priceMatchEnabled: data.priceMatchEnabled,
+      priceBeatPercent: data.priceBeatPercent,
+      minMarginPercent: data.minMarginPercent,
+      notifyOnPriceChange: data.notifyOnPriceChange,
+      notifyEmail: data.notifyEmail,
+      priceChangeThreshold: data.priceChangeThreshold,
+    },
+    create: {
+      shopId,
+      provider: data.provider ? providerEnumMap[data.provider] : "CUSTOM",
+      apiKey: data.apiKey,
+      apiSecret: data.apiSecret,
+      apiEndpoint: data.apiEndpoint,
+      enabled: data.enabled ?? false,
+      syncFrequency: data.syncFrequency ? frequencyEnumMap[data.syncFrequency] : "DAILY",
+      syncAllProducts: data.syncAllProducts ?? false,
+      syncProductIds: data.syncProductIds ?? [],
+      autoApplyRules: data.autoApplyRules ?? false,
+      priceMatchEnabled: data.priceMatchEnabled ?? false,
+      priceBeatPercent: data.priceBeatPercent,
+      minMarginPercent: data.minMarginPercent,
+      notifyOnPriceChange: data.notifyOnPriceChange ?? true,
+      notifyEmail: data.notifyEmail,
+      priceChangeThreshold: data.priceChangeThreshold,
+    },
+  });
+}
+
+/**
+ * Update sync status after a sync attempt
+ */
+export async function updateSyncStatus(
+  shopId: string,
+  status: "SUCCESS" | "PARTIAL" | "FAILED" | "IN_PROGRESS",
+  error?: string,
+  productsSynced?: number
+) {
+  const nextSyncAt = new Date();
+
+  // Get current settings to determine next sync time
+  const settings = await prisma.competitorSyncSettings.findUnique({
+    where: { shopId },
+    select: { syncFrequency: true },
+  });
+
+  if (settings) {
+    switch (settings.syncFrequency) {
+      case "HOURLY":
+        nextSyncAt.setHours(nextSyncAt.getHours() + 1);
+        break;
+      case "DAILY":
+        nextSyncAt.setDate(nextSyncAt.getDate() + 1);
+        break;
+      case "WEEKLY":
+        nextSyncAt.setDate(nextSyncAt.getDate() + 7);
+        break;
+      case "MONTHLY":
+        nextSyncAt.setMonth(nextSyncAt.getMonth() + 1);
+        break;
+    }
+  }
+
+  return prisma.competitorSyncSettings.update({
+    where: { shopId },
+    data: {
+      lastSyncAt: new Date(),
+      nextSyncAt: status !== "IN_PROGRESS" ? nextSyncAt : undefined,
+      lastSyncStatus: status,
+      lastSyncError: error || null,
+      totalSyncs: { increment: status !== "IN_PROGRESS" ? 1 : 0 },
+      totalProductsSynced: productsSynced ? { increment: productsSynced } : undefined,
+    },
+  });
 }
 
 /**
