@@ -5,6 +5,7 @@
 ## Getting Started
 
 * [Installation](getting-started/installation.md)
+* [After Purchase - What's Next?](getting-started/after-purchase.md)
 * [Quick Start Guide](getting-started/quick-start.md)
 * [Dashboard Overview](getting-started/dashboard.md)
 * [Understanding Plans](getting-started/plans.md)
