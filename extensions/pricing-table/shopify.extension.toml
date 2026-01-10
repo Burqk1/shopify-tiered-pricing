@@ -35,3 +35,13 @@ handle = "pricing-table"
   type = "spin-wheel"
   name = "Spin Wheel Popup"
   target = "section"
+
+  [[extensions.blocks]]
+  type = "cart-progress"
+  name = "Cart Progress Bar"
+  target = "section"
+
+  [[extensions.blocks]]
+  type = "announcement-progress"
+  name = "Announcement Progress Bar"
+  target = "section"

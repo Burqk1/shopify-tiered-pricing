@@ -15,6 +15,7 @@
   {% assign is_complete = true %}
   {% assign remaining = 0 %}
 {% endif %}
+{% capture remaining_formatted %}{{ remaining | times: 100 | money }}{% endcapture %}
 
 <div class="cart-progress-bar"
      data-threshold="{{ threshold }}"
@@ -33,11 +34,11 @@
       </p>
     {% elsif cart_total == 0 %}
       <p class="cart-progress-bar__message">
-        {{ block.settings.empty_message | replace: '{amount}', remaining | money }}
+        {{ block.settings.empty_message | replace: '[amount]', remaining_formatted }}
       </p>
     {% else %}
       <p class="cart-progress-bar__message">
-        {{ block.settings.progress_message | replace: '{amount}', remaining | money }}
+        {{ block.settings.progress_message | replace: '[amount]', remaining_formatted }}
       </p>
     {% endif %}
 
@@ -155,13 +156,13 @@
       "type": "text",
       "id": "empty_message",
       "label": "Empty Cart Message",
-      "default": "Add {amount} to get free shipping!"
+      "default": "Add [amount] to get free shipping!"
     },
     {
       "type": "text",
       "id": "progress_message",
       "label": "Progress Message",
-      "default": "Only {amount} away from free shipping!"
+      "default": "Only [amount] away from free shipping!"
     },
     {
       "type": "text",
@@ -268,12 +269,6 @@
       "id": "animated",
       "label": "Animated Stripes",
       "default": false
-    }
-  ],
-  "presets": [
-    {
-      "name": "Cart Progress Bar",
-      "category": "Cart"
     }
   ]
 }

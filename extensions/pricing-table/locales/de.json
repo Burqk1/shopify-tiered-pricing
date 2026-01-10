@@ -1,4 +1,29 @@
 {
+  "cart_progress": {
+    "name": "Warenkorb Fortschrittsbalken",
+    "settings": {
+      "threshold": {
+        "label": "Schwellenwert"
+      },
+      "empty_message": {
+        "label": "Leerer Warenkorb Nachricht"
+      },
+      "progress_message": {
+        "label": "Fortschrittsnachricht"
+      },
+      "complete_message": {
+        "label": "Abschlussnachricht"
+      }
+    }
+  },
+  "announcement_progress": {
+    "name": "Ankündigungs Fortschrittsbalken",
+    "settings": {
+      "threshold": {
+        "label": "Schwellenwert"
+      }
+    }
+  },
   "tier_table": {
     "title": "Mengenrabatte",
     "quantity": "Menge",

@@ -1,4 +1,29 @@
 {
+  "cart_progress": {
+    "name": "Barra de progreso del carrito",
+    "settings": {
+      "threshold": {
+        "label": "Umbral"
+      },
+      "empty_message": {
+        "label": "Mensaje de carrito vacío"
+      },
+      "progress_message": {
+        "label": "Mensaje de progreso"
+      },
+      "complete_message": {
+        "label": "Mensaje de completado"
+      }
+    }
+  },
+  "announcement_progress": {
+    "name": "Barra de progreso de anuncio",
+    "settings": {
+      "threshold": {
+        "label": "Umbral"
+      }
+    }
+  },
   "tier_table": {
     "title": "Descuentos por Volumen",
     "quantity": "Cantidad",

@@ -15,6 +15,7 @@
   {% assign is_complete = true %}
   {% assign remaining = 0 %}
 {% endif %}
+{% capture remaining_formatted %}{{ remaining | times: 100 | money }}{% endcapture %}
 
 {% unless block.settings.hide_when_complete and is_complete %}
 <div class="announcement-progress"
@@ -33,12 +34,12 @@
       {% elsif cart_total == 0 %}
         <span class="announcement-progress__icon">{{ block.settings.icon }}</span>
         <span class="announcement-progress__text">
-          {{ block.settings.empty_message | replace: '{amount}', remaining | money }}
+          {{ block.settings.empty_message | replace: '[amount]', remaining_formatted }}
         </span>
       {% else %}
         <span class="announcement-progress__icon">{{ block.settings.icon }}</span>
         <span class="announcement-progress__text">
-          {{ block.settings.progress_message | replace: '{amount}', remaining | money }}
+          {{ block.settings.progress_message | replace: '[amount]', remaining_formatted }}
         </span>
       {% endif %}
     </div>
@@ -187,13 +188,13 @@
       "type": "text",
       "id": "empty_message",
       "label": "Empty Cart Message",
-      "default": "Free shipping on orders over {amount}!"
+      "default": "Free shipping on orders over [amount]!"
     },
     {
       "type": "text",
       "id": "progress_message",
       "label": "Progress Message",
-      "default": "Add {amount} more for FREE shipping!"
+      "default": "Add [amount] more for FREE shipping!"
     },
     {
       "type": "text",
@@ -282,12 +283,6 @@
       "id": "hide_when_complete",
       "label": "Hide When Complete",
       "default": false
-    }
-  ],
-  "presets": [
-    {
-      "name": "Announcement Progress",
-      "category": "Header"
     }
   ]
 }

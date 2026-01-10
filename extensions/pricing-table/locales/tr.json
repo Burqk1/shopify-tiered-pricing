@@ -1,4 +1,29 @@
 {
+  "cart_progress": {
+    "name": "Sepet İlerleme Çubuğu",
+    "settings": {
+      "threshold": {
+        "label": "Eşik Tutar"
+      },
+      "empty_message": {
+        "label": "Boş Sepet Mesajı"
+      },
+      "progress_message": {
+        "label": "İlerleme Mesajı"
+      },
+      "complete_message": {
+        "label": "Tamamlanma Mesajı"
+      }
+    }
+  },
+  "announcement_progress": {
+    "name": "Duyuru İlerleme Çubuğu",
+    "settings": {
+      "threshold": {
+        "label": "Eşik Tutar"
+      }
+    }
+  },
   "tier_table": {
     "title": "Toplu Alım İndirimleri",
     "quantity": "Adet",

@@ -1,4 +1,29 @@
 {
+  "cart_progress": {
+    "name": "Barre de progression du panier",
+    "settings": {
+      "threshold": {
+        "label": "Seuil"
+      },
+      "empty_message": {
+        "label": "Message panier vide"
+      },
+      "progress_message": {
+        "label": "Message de progression"
+      },
+      "complete_message": {
+        "label": "Message de complétion"
+      }
+    }
+  },
+  "announcement_progress": {
+    "name": "Barre de progression d'annonce",
+    "settings": {
+      "threshold": {
+        "label": "Seuil"
+      }
+    }
+  },
   "tier_table": {
     "title": "Remises sur Volume",
     "quantity": "Quantité",
