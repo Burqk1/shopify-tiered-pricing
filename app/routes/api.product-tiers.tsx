@@ -2,7 +2,7 @@
  * App Proxy API Route
  *
  * Provides product tier data to the storefront Theme Extension.
- * Called via Shopify App Proxy: /apps/tiered-pricing/api/product-tiers
+ * Called via Shopify App Proxy: /apps/tiered-pricing/product-tiers -> /api/product-tiers
  */
 
 import type { LoaderFunctionArgs } from "@remix-run/node";

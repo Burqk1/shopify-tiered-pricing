@@ -57,7 +57,8 @@ export function ProductBlock() {
 
       try {
         const productGid = `gid://shopify/Product/${product.id}`;
-        const url = `https://${shop.myshopifyDomain}/apps/tiered-pricing/api/pos-tiers?shop=${shop.myshopifyDomain}&product_id=${encodeURIComponent(productGid)}`;
+        // App Proxy: /apps/tiered-pricing/* -> /api/*
+        const url = `https://${shop.myshopifyDomain}/apps/tiered-pricing/pos-tiers?shop=${shop.myshopifyDomain}&product_id=${encodeURIComponent(productGid)}`;
 
         const response = await fetch(url);
         if (!response.ok) {

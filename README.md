@@ -106,7 +106,7 @@ SCOPES=write_products,read_products,write_discounts,read_discounts,write_custome
 ### App Proxy Endpoint
 
 ```
-GET /apps/tiered-pricing/api/product-tiers?product_id={id}&shop={domain}
+GET /apps/tiered-pricing/product-tiers?product_id={id}&shop={domain}
 ```
 
 **Response:**

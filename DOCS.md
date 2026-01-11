@@ -429,7 +429,7 @@ All API requests require App Proxy authentication via HMAC signature.
 #### Get Product Tiers
 
 ```
-GET /apps/tiered-pricing/api/product-tiers
+GET /apps/tiered-pricing/product-tiers
 ```
 
 **Parameters:**
