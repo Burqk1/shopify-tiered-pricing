@@ -1,8 +1,8 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "Tiered Pricing"
+name = "Tiered Pricing Pro"
 client_id = "cf2600a5c8daa3bd218919c160f1d550"
-application_url = "https://shopify-tiered-pricing.vercel.app/app"
+application_url = "https://tiered-pricing-pro.vercel.app/app"
 embedded = false
 
 [access_scopes]
@@ -11,25 +11,25 @@ scopes = "write_products,read_products,write_discounts,read_discounts,write_cust
 
 [auth]
 redirect_urls = [
-  "https://shopify-tiered-pricing.vercel.app/auth/callback",
-  "https://shopify-tiered-pricing.vercel.app/auth/shopify/callback",
-  "https://shopify-tiered-pricing.vercel.app/api/auth/callback"
+  "https://tiered-pricing-pro.vercel.app/auth/callback",
+  "https://tiered-pricing-pro.vercel.app/auth/shopify/callback",
+  "https://tiered-pricing-pro.vercel.app/api/auth/callback"
 ]
 
 [webhooks]
-api_version = "2025-01"
+api_version = "2025-04"
 
   [webhooks.privacy_compliance]
-  customer_deletion_url = "https://shopify-tiered-pricing.vercel.app/webhooks/customers/redact"
-  customer_data_request_url = "https://shopify-tiered-pricing.vercel.app/webhooks/customers/data_request"
-  shop_deletion_url = "https://shopify-tiered-pricing.vercel.app/webhooks/shop/redact"
+  customer_deletion_url = "https://tiered-pricing-pro.vercel.app/webhooks/customers/redact"
+  customer_data_request_url = "https://tiered-pricing-pro.vercel.app/webhooks/customers/data_request"
+  shop_deletion_url = "https://tiered-pricing-pro.vercel.app/webhooks/shop/redact"
 
 [pos]
 embedded = false
 
 # App Proxy - Theme Extension'ın storefront'tan API'ye erişmesi için
 [app_proxy]
-url = "https://shopify-tiered-pricing.vercel.app/api"
+url = "https://tiered-pricing-pro.vercel.app/api"
 subpath = "tiered-pricing"
 prefix = "apps"
 
