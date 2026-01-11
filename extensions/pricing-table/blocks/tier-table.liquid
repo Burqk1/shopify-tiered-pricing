@@ -283,7 +283,8 @@
   async function fetchTiers() {
     try {
       // App Proxy automatically adds shop and signature parameters
-      const response = await fetch('/apps/tiered-pricing/api/product-tiers?product_id=' + encodeURIComponent(productGid), {
+      // URL: /apps/tiered-pricing/product-tiers -> proxies to /api/product-tiers
+      const response = await fetch('/apps/tiered-pricing/product-tiers?product_id=' + encodeURIComponent(productGid), {
         headers: {
           'Accept': 'application/json'
         }
