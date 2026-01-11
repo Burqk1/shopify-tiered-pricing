@@ -198,7 +198,7 @@ Contact Shopify support for billing issues. Refunds are handled through Shopify'
 
 ## Still Have Questions?
 
-- **Email**: support@tieredpricing.app
+- **Email**: contact@novamentstudios.com
 - **In-app Chat**: Available during business hours
 - **Documentation**: You're already here!
 

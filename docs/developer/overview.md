@@ -471,7 +471,7 @@ X-RateLimit-Reset: 1642248600
 
 ### Getting Help
 
-- Email: dev-support@tieredpricing.app
+- Email: contact@novamentstudios.com
 - Community Forum: https://community.tieredpricing.app
 - Stack Overflow: tag `tiered-pricing-pro`
 

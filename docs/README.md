@@ -43,7 +43,7 @@ Get started in 3 simple steps:
 
 ## Need Help?
 
-- 📧 Email: support@tieredpricing.app
+- 📧 Email: contact@novamentstudios.com
 - 💬 Live Chat: Available in-app
 - 📚 This documentation
 

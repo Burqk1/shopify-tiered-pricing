@@ -20,7 +20,7 @@ Best for:
 
 ### Email Support
 
-**Address:** support@tieredpricing.app
+**Address:** contact@novamentstudios.com
 
 **Response Times:**
 | Plan | Response Time |
@@ -157,7 +157,7 @@ Found a bug? Help us fix it!
 ### Report a Bug
 
 1. Check [Known Issues](#known-issues) first
-2. Email support@tieredpricing.app with:
+2. Email contact@novamentstudios.com with:
    - Bug description
    - Steps to reproduce
    - Expected vs. actual behavior
@@ -238,7 +238,7 @@ Need something custom?
 - API development
 - Theme customization
 
-Contact: enterprise@tieredpricing.app
+Contact: contact@novamentstudios.com
 
 ### Service Level Agreement (SLA)
 
@@ -251,20 +251,20 @@ Enterprise SLA includes:
 ## Contact Information
 
 ### Support
-- Email: support@tieredpricing.app
+- Email: contact@novamentstudios.com
 - Chat: In-app (business hours)
 - Response: See plan-based times above
 
 ### Sales
-- Email: sales@tieredpricing.app
+- Email: contact@novamentstudios.com
 - For: Plan upgrades, enterprise inquiries
 
 ### Partnerships
-- Email: partners@tieredpricing.app
+- Email: contact@novamentstudios.com
 - For: Agency partnerships, integrations
 
 ### Press
-- Email: press@tieredpricing.app
+- Email: contact@novamentstudios.com
 - For: Media inquiries, interviews
 
 ## Office Hours

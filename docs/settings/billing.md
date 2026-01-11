@@ -268,7 +268,7 @@ For high-volume merchants:
 - SLA guarantees
 - Custom features
 
-Contact sales@tieredpricing.app for enterprise inquiries.
+Contact contact@novamentstudios.com for enterprise inquiries.
 
 ## Tax Information
 

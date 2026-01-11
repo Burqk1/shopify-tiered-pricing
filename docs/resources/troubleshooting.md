@@ -426,7 +426,7 @@ Before contacting support, gather:
 
 ### Contact Support
 
-- **Email**: support@tieredpricing.app
+- **Email**: contact@novamentstudios.com
 - **In-app Chat**: Available during business hours
 - **Response Time**:
   - Professional: 4 hours
