@@ -1,0 +1,246 @@
+{% comment %}
+  Sale Price Display Block
+  Modifies the theme's price element to show sale pricing
+
+  Finds the product price on page and transforms it to:
+  $364.98  $729.95  [SALE]
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "t:sale_price.name",
+  "target": "section",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "color",
+      "id": "sale_color",
+      "label": "t:sale_price.settings.sale_color",
+      "default": "#dc2626"
+    },
+    {
+      "type": "color",
+      "id": "badge_bg",
+      "label": "t:sale_price.settings.badge_bg",
+      "default": "#dc2626"
+    },
+    {
+      "type": "color",
+      "id": "badge_text",
+      "label": "t:sale_price.settings.badge_text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "text",
+      "id": "badge_text_content",
+      "label": "t:sale_price.settings.badge_text_content",
+      "default": "SALE"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_info",
+      "label": "t:sale_price.settings.show_info",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "t:sale_price.settings.show_powered_by",
+      "default": true,
+      "info": "t:sale_price.settings.powered_by_info"
+    }
+  ]
+}
+{% endschema %}
+
+<div id="tier-price-config-{{ block.id }}" style="display:none;"
+  data-product-gid="gid://shopify/Product/{{ product.id }}"
+  data-base-price="{{ product.selected_or_first_available_variant.price | money_without_currency | replace: ',', '' }}"
+  data-currency-symbol="{{ cart.currency.symbol }}"
+  data-sale-color="{{ block.settings.sale_color }}"
+  data-badge-bg="{{ block.settings.badge_bg }}"
+  data-badge-text="{{ block.settings.badge_text }}"
+  data-badge-content="{{ block.settings.badge_text_content }}"
+  data-show-info="{{ block.settings.show_info }}"
+  data-show-powered="{{ block.settings.show_powered_by }}"
+  data-quantity-info-template="{{ 'sale_price.quantity_info' | t }}"
+  data-powered-by-text="{{ 'sale_price.powered_by' | t }}"
+></div>
+
+<style>
+  /* Injected sale price styles */
+  .tiered-price-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .tiered-price-sale {
+    font-weight: 700;
+    color: {{ block.settings.sale_color }};
+  }
+
+  .tiered-price-original {
+    text-decoration: line-through;
+    color: #9ca3af;
+    font-weight: 400;
+    font-size: 0.85em;
+  }
+
+  .tiered-price-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 8px;
+    background: {{ block.settings.badge_bg }};
+    color: {{ block.settings.badge_text }};
+    font-weight: 700;
+    font-size: 0.7em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 4px;
+  }
+
+  .tiered-price-info {
+    display: block;
+    width: 100%;
+    font-size: 0.75em;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+
+  .tiered-powered-by {
+    font-size: 0.6rem;
+    color: #c4c4c4;
+    margin-top: 2px;
+  }
+
+  .tiered-powered-by a {
+    color: #a3a3a3;
+    text-decoration: none;
+  }
+</style>
+
+<script>
+(function() {
+  const configEl = document.getElementById('tier-price-config-{{ block.id }}');
+  if (!configEl) return;
+
+  const productGid = configEl.dataset.productGid;
+  const basePrice = parseFloat(configEl.dataset.basePrice);
+  const currencySymbol = configEl.dataset.currencySymbol;
+  const saleColor = configEl.dataset.saleColor;
+  const badgeBg = configEl.dataset.badgeBg;
+  const badgeText = configEl.dataset.badgeText;
+  const badgeContent = configEl.dataset.badgeContent;
+  const showInfo = configEl.dataset.showInfo === 'true';
+  const showPowered = configEl.dataset.showPowered === 'true';
+  const quantityInfoTemplate = configEl.dataset.quantityInfoTemplate || 'Buy {{ quantity }}+ and get {{ discount }}% off';
+  const poweredByText = configEl.dataset.poweredByText || 'Tiered Pricing';
+
+  // Find the theme's price element
+  function findPriceElement() {
+    const selectors = [
+      '.price__regular .price-item--regular',
+      '.price-item--regular',
+      '.product__price',
+      '.product-price',
+      '[data-product-price]',
+      '.price .money',
+      '.product-single__price',
+      '.ProductMeta__Price'
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el && el.textContent.includes(currencySymbol)) {
+        return el;
+      }
+    }
+
+    // Fallback: find any element with the price
+    const priceText = currencySymbol + basePrice.toFixed(2);
+    const allElements = document.querySelectorAll('*');
+    for (const el of allElements) {
+      if (el.children.length === 0 && el.textContent.trim() === priceText) {
+        return el;
+      }
+    }
+
+    return null;
+  }
+
+  async function fetchTiers() {
+    try {
+      const response = await fetch('/apps/tiered-pricing/product-tiers?product_id=' + encodeURIComponent(productGid), {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.tiers || [];
+    } catch (e) {
+      console.error('Sale price: Failed to fetch', e);
+      return [];
+    }
+  }
+
+  function modifyPriceElement(tiers) {
+    if (!tiers || tiers.length === 0) return;
+
+    const priceEl = findPriceElement();
+    if (!priceEl) {
+      console.warn('Tiered Pricing: Could not find price element');
+      return;
+    }
+
+    // Get the first tier
+    const tier = tiers[0];
+    const minQty = parseInt(tier.min, 10) || 0;
+    const tierValue = parseFloat(tier.value) || 0;
+    const isPercentage = tier.valueType === 'PERCENTAGE';
+
+    // Calculate discounted price
+    let discountedPrice = basePrice;
+    let discountPercent = 0;
+
+    if (isPercentage) {
+      discountedPrice = basePrice * (1 - tierValue / 100);
+      discountPercent = tierValue;
+    } else {
+      discountedPrice = basePrice - tierValue;
+      discountPercent = Math.round((tierValue / basePrice) * 100);
+    }
+
+    // Get parent to replace content
+    const parent = priceEl.parentElement;
+    const originalStyles = window.getComputedStyle(priceEl);
+    const fontSize = originalStyles.fontSize;
+
+    // Build new price HTML
+    let html = '<span class="tiered-price-wrapper">';
+    html += '<span class="tiered-price-sale" style="font-size:' + fontSize + ';color:' + saleColor + '">' + currencySymbol + discountedPrice.toFixed(2) + '</span>';
+    html += '<span class="tiered-price-original">' + currencySymbol + basePrice.toFixed(2) + '</span>';
+    html += '<span class="tiered-price-badge" style="background:' + badgeBg + ';color:' + badgeText + '">' + badgeContent + '</span>';
+
+    if (showInfo) {
+      const infoText = quantityInfoTemplate
+        .replace('{{ quantity }}', minQty)
+        .replace('{{ discount }}', discountPercent);
+      html += '<span class="tiered-price-info">' + infoText + '</span>';
+    }
+
+    if (showPowered) {
+      html += '<span class="tiered-powered-by"><a href="https://apps.shopify.com/tiered-pricing" target="_blank">' + poweredByText + '</a></span>';
+    }
+
+    html += '</span>';
+
+    // Replace price element content
+    priceEl.innerHTML = html;
+    priceEl.style.display = 'block';
+  }
+
+  fetchTiers().then(modifyPriceElement);
+})();
+</script>

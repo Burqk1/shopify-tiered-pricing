@@ -95,5 +95,53 @@
     "no_extra_payment": "Keine zusätzliche Zahlung erforderlich",
     "ships_together": "Wird mit Ihrer Bestellung versendet",
     "added": "Zu Ihrer Bestellung hinzugefügt!"
+  },
+  "sale_price": {
+    "name": "Angebotspreis Anzeige",
+    "settings": {
+      "sale_color": "Angebotspreis Farbe",
+      "badge_bg": "Abzeichen Hintergrund",
+      "badge_text": "Abzeichen Textfarbe",
+      "badge_text_content": "Abzeichen Text",
+      "show_info": "Mengeninfo anzeigen",
+      "show_powered_by": "Powered By anzeigen",
+      "powered_by_info": "Erforderlich für kostenlosen Plan"
+    },
+    "quantity_info": "Kaufe {{ quantity }}+ und erhalte {{ discount }}% Rabatt",
+    "powered_by": "Tiered Pricing"
+  },
+  "add_to_cart_enhancer": {
+    "name": "Warenkorb-Button Verbesserer",
+    "settings": {
+      "badge_bg": "Abzeichen Hintergrund",
+      "badge_text": "Abzeichen Textfarbe",
+      "style": "Anzeigestil",
+      "highlight_best": "Bestes Angebot hervorheben",
+      "show_powered_by": "Powered By anzeigen",
+      "powered_by_info": "Erforderlich für kostenlosen Plan"
+    },
+    "buy": "Kaufe",
+    "off": "RABATT",
+    "best_deal": "BESTE",
+    "powered_by": "Tiered Pricing"
+  },
+  "quantity_enhancer": {
+    "name": "Mengen-Rabattinfo",
+    "settings": {
+      "highlight_color": "Hervorhebungsfarbe",
+      "text_color": "Textfarbe",
+      "position": "Anzeigeposition",
+      "show_savings": "Gesamtersparnis anzeigen",
+      "show_next_tier": "Nächste Stufe Hinweis",
+      "show_next_tier_info": "Schlägt vor, mehr Artikel hinzuzufügen, um die nächste Rabattstufe zu erreichen",
+      "animate": "Änderungen animieren",
+      "show_powered_by": "Powered By anzeigen",
+      "powered_by_info": "Erforderlich für kostenlosen Plan"
+    },
+    "you_save": "Rabatt",
+    "add_more": "Füge",
+    "for_discount": "mehr hinzu für",
+    "no_discount": "Mehr hinzufügen für Rabatte",
+    "powered_by": "Tiered Pricing"
   }
 }

@@ -95,5 +95,53 @@
     "no_extra_payment": "No extra payment needed",
     "ships_together": "Ships with your order",
     "added": "Added to your order!"
+  },
+  "sale_price": {
+    "name": "Sale Price Display",
+    "settings": {
+      "sale_color": "Sale Price Color",
+      "badge_bg": "Badge Background",
+      "badge_text": "Badge Text Color",
+      "badge_text_content": "Badge Text",
+      "show_info": "Show Quantity Info",
+      "show_powered_by": "Show Powered By",
+      "powered_by_info": "Required for free plan"
+    },
+    "quantity_info": "Buy {{ quantity }}+ and get {{ discount }}% off",
+    "powered_by": "Tiered Pricing"
+  },
+  "add_to_cart_enhancer": {
+    "name": "Add to Cart Enhancer",
+    "settings": {
+      "badge_bg": "Badge Background",
+      "badge_text": "Badge Text Color",
+      "style": "Display Style",
+      "highlight_best": "Highlight Best Deal",
+      "show_powered_by": "Show Powered By",
+      "powered_by_info": "Required for free plan"
+    },
+    "buy": "Buy",
+    "off": "OFF",
+    "best_deal": "BEST",
+    "powered_by": "Tiered Pricing"
+  },
+  "quantity_enhancer": {
+    "name": "Quantity Discount Info",
+    "settings": {
+      "highlight_color": "Highlight Color",
+      "text_color": "Text Color",
+      "position": "Display Position",
+      "show_savings": "Show Total Savings",
+      "show_next_tier": "Show Next Tier Hint",
+      "show_next_tier_info": "Suggests adding more items to reach the next discount tier",
+      "animate": "Animate Changes",
+      "show_powered_by": "Show Powered By",
+      "powered_by_info": "Required for free plan"
+    },
+    "you_save": "discount",
+    "add_more": "Add",
+    "for_discount": "more for",
+    "no_discount": "Add more to unlock discounts",
+    "powered_by": "Tiered Pricing"
   }
 }

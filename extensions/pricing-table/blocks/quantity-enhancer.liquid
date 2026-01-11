@@ -1,0 +1,437 @@
+{% comment %}
+  Quantity Selector Enhancer
+  Finds the theme's quantity input and adds dynamic discount info
+
+  Shows discount when quantity changes:
+  Qty: [5] → You save 10% ($7.30)
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "t:quantity_enhancer.name",
+  "target": "section",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "t:quantity_enhancer.settings.highlight_color",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "t:quantity_enhancer.settings.text_color",
+      "default": "#374151"
+    },
+    {
+      "type": "select",
+      "id": "position",
+      "label": "t:quantity_enhancer.settings.position",
+      "options": [
+        { "value": "below", "label": "Below Quantity" },
+        { "value": "beside", "label": "Beside Quantity" },
+        { "value": "tooltip", "label": "Tooltip on Hover" }
+      ],
+      "default": "below"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_savings",
+      "label": "t:quantity_enhancer.settings.show_savings",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_next_tier",
+      "label": "t:quantity_enhancer.settings.show_next_tier",
+      "default": true,
+      "info": "t:quantity_enhancer.settings.show_next_tier_info"
+    },
+    {
+      "type": "checkbox",
+      "id": "animate",
+      "label": "t:quantity_enhancer.settings.animate",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "t:quantity_enhancer.settings.show_powered_by",
+      "default": true,
+      "info": "t:quantity_enhancer.settings.powered_by_info"
+    }
+  ]
+}
+{% endschema %}
+
+<div id="qty-enhancer-config-{{ block.id }}" style="display:none;"
+  data-product-gid="gid://shopify/Product/{{ product.id }}"
+  data-base-price="{{ product.selected_or_first_available_variant.price | money_without_currency | replace: ',', '' }}"
+  data-currency-symbol="{{ cart.currency.symbol }}"
+  data-highlight-color="{{ block.settings.highlight_color }}"
+  data-text-color="{{ block.settings.text_color }}"
+  data-position="{{ block.settings.position }}"
+  data-show-savings="{{ block.settings.show_savings }}"
+  data-show-next-tier="{{ block.settings.show_next_tier }}"
+  data-animate="{{ block.settings.animate }}"
+  data-show-powered="{{ block.settings.show_powered_by }}"
+  data-you-save="{{ 'quantity_enhancer.you_save' | t }}"
+  data-add-more="{{ 'quantity_enhancer.add_more' | t }}"
+  data-for-discount="{{ 'quantity_enhancer.for_discount' | t }}"
+  data-no-discount="{{ 'quantity_enhancer.no_discount' | t }}"
+  data-powered-text="{{ 'quantity_enhancer.powered_by' | t }}"
+></div>
+
+<style>
+  .qty-discount-info {
+    font-size: 0.85rem;
+    color: {{ block.settings.text_color }};
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: {{ block.settings.highlight_color }}10;
+    border-left: 3px solid {{ block.settings.highlight_color }};
+    border-radius: 0 6px 6px 0;
+    display: none;
+  }
+
+  .qty-discount-info.visible {
+    display: block;
+  }
+
+  .qty-discount-info.animate {
+    animation: qtyPulse 0.3s ease;
+  }
+
+  @keyframes qtyPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+
+  .qty-discount-info.position-beside {
+    display: none;
+    margin-top: 0;
+    margin-left: 12px;
+  }
+
+  .qty-discount-info.position-beside.visible {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .qty-discount-info.position-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    white-space: nowrap;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: none;
+  }
+
+  .qty-discount-info.position-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: {{ block.settings.highlight_color }}10;
+  }
+
+  .qty-discount-info.position-tooltip.visible {
+    display: block;
+  }
+
+  .qty-discount-amount {
+    font-weight: 700;
+    color: {{ block.settings.highlight_color }};
+  }
+
+  .qty-discount-savings {
+    color: #6b7280;
+    font-size: 0.8rem;
+  }
+
+  .qty-next-tier {
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .qty-next-tier-action {
+    color: {{ block.settings.highlight_color }};
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  .qty-no-discount {
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  .qty-enhancer-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .qty-powered-by {
+    font-size: 0.6rem;
+    color: #c4c4c4;
+    margin-top: 4px;
+  }
+
+  .qty-powered-by a {
+    color: #a3a3a3;
+    text-decoration: none;
+  }
+</style>
+
+<script>
+(function() {
+  const configEl = document.getElementById('qty-enhancer-config-{{ block.id }}');
+  if (!configEl) return;
+
+  const productGid = configEl.dataset.productGid;
+  const basePrice = parseFloat(configEl.dataset.basePrice);
+  const currencySymbol = configEl.dataset.currencySymbol;
+  const highlightColor = configEl.dataset.highlightColor;
+  const textColor = configEl.dataset.textColor;
+  const position = configEl.dataset.position;
+  const showSavings = configEl.dataset.showSavings === 'true';
+  const showNextTier = configEl.dataset.showNextTier === 'true';
+  const animate = configEl.dataset.animate === 'true';
+  const showPowered = configEl.dataset.showPowered === 'true';
+
+  // Localized strings
+  const youSaveText = configEl.dataset.youSave || 'You save';
+  const addMoreText = configEl.dataset.addMore || 'Add';
+  const forDiscountText = configEl.dataset.forDiscount || 'more for';
+  const noDiscountText = configEl.dataset.noDiscount || 'Add more to unlock discounts';
+  const poweredText = configEl.dataset.poweredText || 'Tiered Pricing';
+
+  let tiers = [];
+  let infoEl = null;
+  let qtyInput = null;
+
+  function findQuantityInput() {
+    const selectors = [
+      'input[name="quantity"]',
+      '.quantity-input',
+      '.product-form__quantity input',
+      '[data-quantity-input]',
+      '.quantity__input',
+      'input[type="number"][name="quantity"]'
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+    }
+
+    return null;
+  }
+
+  async function fetchTiers() {
+    try {
+      const response = await fetch('/apps/tiered-pricing/product-tiers?product_id=' + encodeURIComponent(productGid), {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.tiers || [];
+    } catch (e) {
+      console.error('Qty Enhancer: Failed to fetch', e);
+      return [];
+    }
+  }
+
+  function findApplicableTier(quantity) {
+    if (!tiers || tiers.length === 0) return null;
+
+    // Sort descending by min quantity
+    const sorted = [...tiers].sort((a, b) => parseInt(b.min) - parseInt(a.min));
+
+    for (const tier of sorted) {
+      if (quantity >= parseInt(tier.min)) {
+        return tier;
+      }
+    }
+
+    return null;
+  }
+
+  function findNextTier(quantity) {
+    if (!tiers || tiers.length === 0) return null;
+
+    // Sort ascending by min quantity
+    const sorted = [...tiers].sort((a, b) => parseInt(a.min) - parseInt(b.min));
+
+    for (const tier of sorted) {
+      if (quantity < parseInt(tier.min)) {
+        return tier;
+      }
+    }
+
+    return null;
+  }
+
+  function updateDiscountInfo(quantity) {
+    if (!infoEl) return;
+
+    const tier = findApplicableTier(quantity);
+    const nextTier = showNextTier ? findNextTier(quantity) : null;
+
+    if (!tier && !nextTier) {
+      infoEl.classList.remove('visible');
+      return;
+    }
+
+    let html = '';
+
+    if (tier) {
+      const tierValue = parseFloat(tier.value) || 0;
+      const isPercentage = tier.valueType === 'PERCENTAGE';
+
+      let discountPercent = tierValue;
+      let savingsPerUnit = 0;
+
+      if (isPercentage) {
+        savingsPerUnit = basePrice * (tierValue / 100);
+      } else {
+        savingsPerUnit = tierValue;
+        discountPercent = Math.round((tierValue / basePrice) * 100);
+      }
+
+      const totalSavings = savingsPerUnit * quantity;
+
+      html += '<span class="qty-discount-amount">' + discountPercent + '% ' + youSaveText + '</span>';
+
+      if (showSavings) {
+        html += ' <span class="qty-discount-savings">(' + currencySymbol + totalSavings.toFixed(2) + ')</span>';
+      }
+    } else {
+      html += '<span class="qty-no-discount">' + noDiscountText + '</span>';
+    }
+
+    if (nextTier && (!tier || parseInt(nextTier.min) > parseInt(tier?.min || 0))) {
+      const needed = parseInt(nextTier.min) - quantity;
+      const nextValue = parseFloat(nextTier.value) || 0;
+      const nextIsPercentage = nextTier.valueType === 'PERCENTAGE';
+      const nextDiscountText = nextIsPercentage ? nextValue + '%' : currencySymbol + nextValue.toFixed(0);
+
+      html += '<div class="qty-next-tier">' + addMoreText + ' <span class="qty-next-tier-action" data-add="' + needed + '">' + needed + '</span> ' + forDiscountText + ' ' + nextDiscountText + '!</div>';
+    }
+
+    if (showPowered) {
+      html += '<div class="qty-powered-by"><a href="https://apps.shopify.com/tiered-pricing" target="_blank">' + poweredText + '</a></div>';
+    }
+
+    infoEl.innerHTML = html;
+    infoEl.classList.add('visible');
+
+    if (animate) {
+      infoEl.classList.remove('animate');
+      void infoEl.offsetWidth; // Trigger reflow
+      infoEl.classList.add('animate');
+    }
+
+    // Add click handler for next tier action
+    const actionEl = infoEl.querySelector('.qty-next-tier-action');
+    if (actionEl && qtyInput) {
+      actionEl.onclick = function() {
+        const addQty = parseInt(this.dataset.add) || 0;
+        const currentQty = parseInt(qtyInput.value) || 1;
+        qtyInput.value = currentQty + addQty;
+        qtyInput.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+    }
+  }
+
+  function init(fetchedTiers) {
+    tiers = fetchedTiers;
+    if (!tiers || tiers.length === 0) return;
+
+    qtyInput = findQuantityInput();
+    if (!qtyInput) {
+      console.warn('Tiered Pricing: Could not find quantity input');
+      return;
+    }
+
+    // Create info element
+    infoEl = document.createElement('div');
+    infoEl.className = 'qty-discount-info position-' + position;
+
+    // Insert based on position
+    if (position === 'beside') {
+      // Wrap input and info together
+      const wrapper = document.createElement('span');
+      wrapper.className = 'qty-enhancer-wrapper';
+      qtyInput.parentNode.insertBefore(wrapper, qtyInput);
+      wrapper.appendChild(qtyInput);
+      wrapper.appendChild(infoEl);
+    } else if (position === 'tooltip') {
+      // Add tooltip relative to input
+      const wrapper = document.createElement('span');
+      wrapper.className = 'qty-enhancer-wrapper';
+      wrapper.style.position = 'relative';
+      qtyInput.parentNode.insertBefore(wrapper, qtyInput);
+      wrapper.appendChild(qtyInput);
+      wrapper.appendChild(infoEl);
+
+      // Show on hover
+      wrapper.addEventListener('mouseenter', function() {
+        updateDiscountInfo(parseInt(qtyInput.value) || 1);
+      });
+      wrapper.addEventListener('mouseleave', function() {
+        infoEl.classList.remove('visible');
+      });
+    } else {
+      // Below - insert after quantity wrapper
+      const qtyWrapper = qtyInput.closest('.quantity') ||
+                         qtyInput.closest('.product-form__quantity') ||
+                         qtyInput.parentElement;
+      qtyWrapper.insertAdjacentElement('afterend', infoEl);
+    }
+
+    // Listen to quantity changes
+    qtyInput.addEventListener('change', function() {
+      if (position !== 'tooltip') {
+        updateDiscountInfo(parseInt(this.value) || 1);
+      }
+    });
+
+    qtyInput.addEventListener('input', function() {
+      if (position !== 'tooltip') {
+        updateDiscountInfo(parseInt(this.value) || 1);
+      }
+    });
+
+    // Also listen to +/- buttons if they exist
+    const qtyWrapper = qtyInput.closest('.quantity') || qtyInput.parentElement;
+    if (qtyWrapper) {
+      qtyWrapper.addEventListener('click', function(e) {
+        if (e.target.closest('button')) {
+          setTimeout(function() {
+            if (position !== 'tooltip') {
+              updateDiscountInfo(parseInt(qtyInput.value) || 1);
+            }
+          }, 50);
+        }
+      });
+    }
+
+    // Initial update
+    if (position !== 'tooltip') {
+      updateDiscountInfo(parseInt(qtyInput.value) || 1);
+    }
+  }
+
+  fetchTiers().then(init);
+})();
+</script>

@@ -95,5 +95,53 @@
     "no_extra_payment": "Ekstra ödeme yok",
     "ships_together": "Siparişinizle birlikte gönderilir",
     "added": "Siparişinize eklendi!"
+  },
+  "sale_price": {
+    "name": "İndirimli Fiyat Gösterimi",
+    "settings": {
+      "sale_color": "İndirimli Fiyat Rengi",
+      "badge_bg": "Rozet Arka Planı",
+      "badge_text": "Rozet Yazı Rengi",
+      "badge_text_content": "Rozet Yazısı",
+      "show_info": "Miktar Bilgisini Göster",
+      "show_powered_by": "Powered By Göster",
+      "powered_by_info": "Ücretsiz plan için gerekli"
+    },
+    "quantity_info": "{{ quantity }}+ adet alırsan %{{ discount }} indirim",
+    "powered_by": "Tiered Pricing"
+  },
+  "add_to_cart_enhancer": {
+    "name": "Sepete Ekle Geliştirici",
+    "settings": {
+      "badge_bg": "Rozet Arka Planı",
+      "badge_text": "Rozet Yazı Rengi",
+      "style": "Görüntüleme Stili",
+      "highlight_best": "En İyi Fırsatı Vurgula",
+      "show_powered_by": "Powered By Göster",
+      "powered_by_info": "Ücretsiz plan için gerekli"
+    },
+    "buy": "Al",
+    "off": "İNDİRİM",
+    "best_deal": "EN İYİ",
+    "powered_by": "Tiered Pricing"
+  },
+  "quantity_enhancer": {
+    "name": "Miktar İndirim Bilgisi",
+    "settings": {
+      "highlight_color": "Vurgu Rengi",
+      "text_color": "Yazı Rengi",
+      "position": "Görüntüleme Konumu",
+      "show_savings": "Toplam Tasarrufu Göster",
+      "show_next_tier": "Sonraki Kademe İpucu",
+      "show_next_tier_info": "Sonraki indirim kademesine ulaşmak için daha fazla ürün eklemeyi önerir",
+      "animate": "Değişiklikleri Animasyonla Göster",
+      "show_powered_by": "Powered By Göster",
+      "powered_by_info": "Ücretsiz plan için gerekli"
+    },
+    "you_save": "indirim",
+    "add_more": "Ekle",
+    "for_discount": "daha fazla al",
+    "no_discount": "İndirim için daha fazla ekleyin",
+    "powered_by": "Tiered Pricing"
   }
 }

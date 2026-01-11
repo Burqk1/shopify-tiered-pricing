@@ -1,0 +1,362 @@
+{% comment %}
+  Add to Cart Button Enhancer
+  Finds the theme's Add to Cart button and injects tier badges below it
+
+  Example output:
+  [Add to Cart Button]
+  Buy 5+ → 10% OFF | Buy 10+ → 20% OFF
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "t:add_to_cart_enhancer.name",
+  "target": "section",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "color",
+      "id": "badge_bg",
+      "label": "t:add_to_cart_enhancer.settings.badge_bg",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "badge_text",
+      "label": "t:add_to_cart_enhancer.settings.badge_text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "t:add_to_cart_enhancer.settings.style",
+      "options": [
+        { "value": "pills", "label": "Pills" },
+        { "value": "inline", "label": "Inline" },
+        { "value": "banner", "label": "Banner" }
+      ],
+      "default": "pills"
+    },
+    {
+      "type": "checkbox",
+      "id": "highlight_best",
+      "label": "t:add_to_cart_enhancer.settings.highlight_best",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "t:add_to_cart_enhancer.settings.show_powered_by",
+      "default": true,
+      "info": "t:add_to_cart_enhancer.settings.powered_by_info"
+    }
+  ]
+}
+{% endschema %}
+
+<div id="atc-enhancer-config-{{ block.id }}" style="display:none;"
+  data-product-gid="gid://shopify/Product/{{ product.id }}"
+  data-base-price="{{ product.selected_or_first_available_variant.price | money_without_currency | replace: ',', '' }}"
+  data-currency-symbol="{{ cart.currency.symbol }}"
+  data-badge-bg="{{ block.settings.badge_bg }}"
+  data-badge-text="{{ block.settings.badge_text }}"
+  data-style="{{ block.settings.style }}"
+  data-highlight-best="{{ block.settings.highlight_best }}"
+  data-show-powered="{{ block.settings.show_powered_by }}"
+  data-buy-text="{{ 'add_to_cart_enhancer.buy' | t }}"
+  data-off-text="{{ 'add_to_cart_enhancer.off' | t }}"
+  data-best-text="{{ 'add_to_cart_enhancer.best_deal' | t }}"
+  data-powered-text="{{ 'add_to_cart_enhancer.powered_by' | t }}"
+></div>
+
+<style>
+  .atc-tier-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Pills Style */
+  .atc-tier-badges.style-pills .atc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: {{ block.settings.badge_bg }};
+    color: {{ block.settings.badge_text }};
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .atc-tier-badges.style-pills .atc-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px {{ block.settings.badge_bg }}40;
+  }
+
+  .atc-tier-badges.style-pills .atc-badge.best-deal {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    position: relative;
+  }
+
+  .atc-tier-badges.style-pills .atc-badge.best-deal::after {
+    content: attr(data-best);
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.6rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+  }
+
+  /* Inline Style */
+  .atc-tier-badges.style-inline {
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .atc-tier-badges.style-inline .atc-badge {
+    font-size: 0.85rem;
+    color: #6b7280;
+    background: none;
+    padding: 0;
+  }
+
+  .atc-tier-badges.style-inline .atc-badge-qty {
+    color: #374151;
+    font-weight: 600;
+  }
+
+  .atc-tier-badges.style-inline .atc-badge-discount {
+    color: {{ block.settings.badge_bg }};
+    font-weight: 700;
+  }
+
+  .atc-tier-badges.style-inline .atc-badge-separator {
+    color: #d1d5db;
+    margin: 0 6px;
+  }
+
+  /* Banner Style */
+  .atc-tier-badges.style-banner {
+    flex-direction: column;
+    background: linear-gradient(135deg, {{ block.settings.badge_bg }}10 0%, {{ block.settings.badge_bg }}20 100%);
+    border: 1px solid {{ block.settings.badge_bg }}30;
+    border-radius: 8px;
+    padding: 12px 16px;
+    gap: 6px;
+  }
+
+  .atc-tier-badges.style-banner .atc-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #374151;
+    background: none;
+    padding: 0;
+  }
+
+  .atc-tier-badges.style-banner .atc-badge::before {
+    content: '✓';
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: {{ block.settings.badge_bg }};
+    color: white;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+
+  .atc-tier-badges.style-banner .atc-badge.best-deal {
+    font-weight: 700;
+    color: {{ block.settings.badge_bg }};
+  }
+
+  .atc-tier-badges.style-banner .atc-badge.best-deal::before {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  }
+
+  .atc-tier-badges.style-banner .atc-badge-discount {
+    font-weight: 700;
+    color: {{ block.settings.badge_bg }};
+  }
+
+  /* Powered by */
+  .atc-powered-by {
+    width: 100%;
+    text-align: center;
+    font-size: 0.6rem;
+    color: #c4c4c4;
+    margin-top: 4px;
+  }
+
+  .atc-powered-by a {
+    color: #a3a3a3;
+    text-decoration: none;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .atc-tier-badges.style-pills .atc-badge {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  const configEl = document.getElementById('atc-enhancer-config-{{ block.id }}');
+  if (!configEl) return;
+
+  const productGid = configEl.dataset.productGid;
+  const basePrice = parseFloat(configEl.dataset.basePrice);
+  const currencySymbol = configEl.dataset.currencySymbol;
+  const badgeBg = configEl.dataset.badgeBg;
+  const badgeText = configEl.dataset.badgeText;
+  const style = configEl.dataset.style;
+  const highlightBest = configEl.dataset.highlightBest === 'true';
+  const showPowered = configEl.dataset.showPowered === 'true';
+  const buyText = configEl.dataset.buyText || 'Buy';
+  const offText = configEl.dataset.offText || 'OFF';
+  const bestText = configEl.dataset.bestText || 'BEST';
+  const poweredText = configEl.dataset.poweredText || 'Tiered Pricing';
+
+  function findAddToCartButton() {
+    const selectors = [
+      'button[name="add"]',
+      'button[type="submit"][name="add"]',
+      '.product-form__submit',
+      '.add-to-cart',
+      '.btn-add-to-cart',
+      '[data-add-to-cart]',
+      '.product-form button[type="submit"]',
+      '.shopify-payment-button',
+      'form[action*="/cart/add"] button[type="submit"]'
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) return el;
+    }
+
+    // Fallback: find button with "cart" text
+    const buttons = document.querySelectorAll('button');
+    for (const btn of buttons) {
+      const text = btn.textContent.toLowerCase();
+      if (text.includes('cart') || text.includes('sepet') || text.includes('add')) {
+        return btn;
+      }
+    }
+
+    return null;
+  }
+
+  async function fetchTiers() {
+    try {
+      const response = await fetch('/apps/tiered-pricing/product-tiers?product_id=' + encodeURIComponent(productGid), {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.tiers || [];
+    } catch (e) {
+      console.error('ATC Enhancer: Failed to fetch', e);
+      return [];
+    }
+  }
+
+  function injectBadges(tiers) {
+    if (!tiers || tiers.length === 0) return;
+
+    const atcButton = findAddToCartButton();
+    if (!atcButton) {
+      console.warn('Tiered Pricing: Could not find Add to Cart button');
+      return;
+    }
+
+    // Find best deal
+    let bestIndex = -1;
+    let maxDiscount = 0;
+    if (highlightBest) {
+      tiers.forEach((t, i) => {
+        const d = t.valueType === 'PERCENTAGE' ? parseFloat(t.value) : (parseFloat(t.value) / basePrice * 100);
+        if (d > maxDiscount) { maxDiscount = d; bestIndex = i; }
+      });
+    }
+
+    // Create container
+    const container = document.createElement('div');
+    container.className = 'atc-tier-badges style-' + style;
+
+    tiers.forEach((tier, index) => {
+      const minQty = parseInt(tier.min, 10) || 0;
+      const tierValue = parseFloat(tier.value) || 0;
+      const isPercentage = tier.valueType === 'PERCENTAGE';
+      const isBest = index === bestIndex && tiers.length > 1;
+
+      const discountText = isPercentage ? tierValue + '%' : currencySymbol + tierValue.toFixed(0);
+
+      const badge = document.createElement('span');
+      badge.className = 'atc-badge' + (isBest ? ' best-deal' : '');
+
+      if (isBest && style === 'pills') {
+        badge.setAttribute('data-best', bestText);
+      }
+
+      if (style === 'pills') {
+        badge.innerHTML = buyText + ' ' + minQty + '+ → ' + discountText + ' ' + offText;
+      } else if (style === 'inline') {
+        badge.innerHTML =
+          '<span class="atc-badge-qty">' + minQty + '+</span> ' +
+          '<span class="atc-badge-discount">' + discountText + ' ' + offText + '</span>';
+
+        if (index < tiers.length - 1) {
+          container.appendChild(badge);
+          const sep = document.createElement('span');
+          sep.className = 'atc-badge-separator';
+          sep.textContent = '|';
+          container.appendChild(sep);
+          return;
+        }
+      } else if (style === 'banner') {
+        badge.innerHTML =
+          '<span class="atc-badge-qty">' + buyText + ' ' + minQty + '+</span> ' +
+          '<span class="atc-badge-discount">' + discountText + ' ' + offText + '</span>';
+      }
+
+      container.appendChild(badge);
+    });
+
+    if (showPowered) {
+      const powered = document.createElement('div');
+      powered.className = 'atc-powered-by';
+      powered.innerHTML = '<a href="https://apps.shopify.com/tiered-pricing" target="_blank">' + poweredText + '</a>';
+      container.appendChild(powered);
+    }
+
+    // Insert after the button's parent (usually the form or button wrapper)
+    const insertTarget = atcButton.closest('.product-form__buttons') ||
+                         atcButton.closest('.product-form') ||
+                         atcButton.parentElement;
+
+    if (insertTarget) {
+      insertTarget.insertAdjacentElement('afterend', container);
+    } else {
+      atcButton.insertAdjacentElement('afterend', container);
+    }
+  }
+
+  fetchTiers().then(injectBadges);
+})();
+</script>

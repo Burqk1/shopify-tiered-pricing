@@ -40,18 +40,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   // Get app's discount functions
   const functionsResponse = await admin.graphql(`
     query {
-      app {
-        installation {
-          id
-        }
-      }
-      shopifyFunctions(first: 10) {
+      shopifyFunctions(first: 25) {
         nodes {
           id
           title
           apiType
           app {
             title
+            handle
           }
         }
       }
@@ -59,14 +55,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   `);
 
   const functionsData = await functionsResponse.json();
+  console.log("Available functions:", JSON.stringify(functionsData.data?.shopifyFunctions?.nodes, null, 2));
 
-  // Find our tiered-discount function
+  // Find our tiered-discount function by multiple criteria
   const functions = functionsData.data?.shopifyFunctions?.nodes || [];
   const tieredDiscountFunction = functions.find(
-    (f: { apiType: string; app?: { title: string } }) =>
-      f.apiType === "product_discounts" &&
-      f.app?.title === "Tiered Pricing Pro"
+    (f: { apiType: string; title: string; app?: { title: string; handle: string } }) =>
+      f.apiType === "product_discounts" && (
+        f.title?.toLowerCase().includes("tiered") ||
+        f.app?.title?.includes("Tiered Pricing") ||
+        f.app?.handle?.includes("tiered-pricing")
+      )
   );
+
+  console.log("Found function:", tieredDiscountFunction);
 
   // Get existing automatic discounts to show
   const response = await admin.graphql(`
@@ -107,7 +109,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (!functionId) {
-    return json({ error: "Discount function not found. Please redeploy the app." }, { status: 400 });
+    return json({
+      error: "Discount function not found. Please run 'shopify app deploy' to deploy the function extension first."
+    }, { status: 400 });
   }
 
   // Get the rule details

@@ -95,5 +95,53 @@
     "no_extra_payment": "Sin pago adicional",
     "ships_together": "Se envía con tu pedido",
     "added": "¡Añadido a tu pedido!"
+  },
+  "sale_price": {
+    "name": "Mostrar precio de oferta",
+    "settings": {
+      "sale_color": "Color del precio de oferta",
+      "badge_bg": "Fondo de la insignia",
+      "badge_text": "Color del texto de la insignia",
+      "badge_text_content": "Texto de la insignia",
+      "show_info": "Mostrar info de cantidad",
+      "show_powered_by": "Mostrar Powered By",
+      "powered_by_info": "Requerido para el plan gratuito"
+    },
+    "quantity_info": "Compra {{ quantity }}+ y obtén {{ discount }}% de descuento",
+    "powered_by": "Tiered Pricing"
+  },
+  "add_to_cart_enhancer": {
+    "name": "Mejorador del Carrito",
+    "settings": {
+      "badge_bg": "Fondo de la insignia",
+      "badge_text": "Color del texto de la insignia",
+      "style": "Estilo de visualización",
+      "highlight_best": "Destacar mejor oferta",
+      "show_powered_by": "Mostrar Powered By",
+      "powered_by_info": "Requerido para el plan gratuito"
+    },
+    "buy": "Compra",
+    "off": "DTO",
+    "best_deal": "MEJOR",
+    "powered_by": "Tiered Pricing"
+  },
+  "quantity_enhancer": {
+    "name": "Info Descuento por Cantidad",
+    "settings": {
+      "highlight_color": "Color de resaltado",
+      "text_color": "Color del texto",
+      "position": "Posición de visualización",
+      "show_savings": "Mostrar ahorro total",
+      "show_next_tier": "Mostrar pista del siguiente nivel",
+      "show_next_tier_info": "Sugiere añadir más artículos para alcanzar el siguiente nivel de descuento",
+      "animate": "Animar cambios",
+      "show_powered_by": "Mostrar Powered By",
+      "powered_by_info": "Requerido para el plan gratuito"
+    },
+    "you_save": "de descuento",
+    "add_more": "Añade",
+    "for_discount": "más para",
+    "no_discount": "Añade más para desbloquear descuentos",
+    "powered_by": "Tiered Pricing"
   }
 }
