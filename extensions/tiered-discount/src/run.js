@@ -18,152 +18,98 @@ const EMPTY_DISCOUNT = {
 };
 
 /**
- * Tiered pricing configuration from metafield
+ * Tiered pricing configuration
  * @typedef {Object} Tier
  * @property {number} minQuantity
  * @property {number} [maxQuantity]
- * @property {"PERCENTAGE" | "FIXED_AMOUNT" | "FIXED_PRICE"} discountType
- * @property {number} discountValue
- * @property {string} [message]
+ * @property {"PERCENTAGE" | "FIXED_AMOUNT"} valueType
+ * @property {number} value
  */
 
 /**
- * Compressed tier format from sync engine
- * @typedef {Object} CompressedTier
- * @property {number} min
- * @property {number} [max]
- * @property {string} vt - valueType
- * @property {number} v - value
- * @property {string} [m] - message
- */
-
-/**
- * Product group for quantity aggregation
- * @typedef {Object} ProductGroup
- * @property {Array<{id: string, quantity: number}>} lines
- * @property {number} totalQuantity
+ * Discount configuration from metafield
+ * @typedef {Object} DiscountConfig
  * @property {Tier[]} tiers
+ * @property {string[]} productIds
+ * @property {string[]} collectionIds
+ * @property {boolean} allProducts
  */
 
 // ============================================================================
-// OPTIMIZED TIER MATCHING (Binary Search for sorted tiers)
+// TIER MATCHING
 // ============================================================================
 
 /**
- * Find the applicable tier using optimized search
- * Assumes tiers are sorted by minQuantity ascending
- * Uses binary search for O(log n) performance on large tier sets
- *
- * @param {Tier[]} tiers - Pre-sorted tiers
+ * Find the applicable tier for a given quantity
+ * @param {Tier[]} tiers
  * @param {number} quantity
  * @returns {Tier | null}
  */
 function findApplicableTier(tiers, quantity) {
   if (!tiers || tiers.length === 0) return null;
 
-  // For small tier arrays (≤5), linear search is faster
-  if (tiers.length <= 5) {
-    let bestTier = null;
-    for (let i = 0; i < tiers.length; i++) {
-      const tier = tiers[i];
-      if (quantity >= tier.minQuantity) {
-        if (tier.maxQuantity === undefined || tier.maxQuantity === null || quantity <= tier.maxQuantity) {
-          // Keep the tier with highest minQuantity that matches
-          if (!bestTier || tier.minQuantity > bestTier.minQuantity) {
-            bestTier = tier;
-          }
-        }
-      }
-    }
-    return bestTier;
-  }
+  // Sort tiers by minQuantity descending to find the best match
+  const sortedTiers = [...tiers].sort((a, b) => b.minQuantity - a.minQuantity);
 
-  // Binary search for larger arrays
-  let left = 0;
-  let right = tiers.length - 1;
-  let bestTier = null;
-
-  while (left <= right) {
-    const mid = (left + right) >>> 1; // Faster than Math.floor
-    const tier = tiers[mid];
-
+  for (const tier of sortedTiers) {
     if (quantity >= tier.minQuantity) {
-      // Check maxQuantity constraint
+      // Check maxQuantity if defined
       if (tier.maxQuantity === undefined || tier.maxQuantity === null || quantity <= tier.maxQuantity) {
-        bestTier = tier;
+        return tier;
       }
-      // Look for higher minQuantity match
-      left = mid + 1;
-    } else {
-      right = mid - 1;
     }
   }
 
-  return bestTier;
+  return null;
 }
 
 /**
- * Parse and normalize tiers from metafield
- * Handles both compressed format and standard format
- *
- * @param {string} metafieldValue
- * @returns {Tier[] | null}
+ * Parse configuration from discount metafield
+ * @param {string | null | undefined} metafieldValue
+ * @returns {DiscountConfig | null}
  */
-function parseTiers(metafieldValue) {
+function parseConfig(metafieldValue) {
   if (!metafieldValue) return null;
 
   try {
-    const parsed = JSON.parse(metafieldValue);
+    const config = JSON.parse(metafieldValue);
 
-    // Handle compressed format from sync engine
-    if (parsed.t && Array.isArray(parsed.t)) {
-      return parsed.t.map(normalizeCompressedTier).sort(sortByMinQuantity);
+    // Validate required fields
+    if (!config.tiers || !Array.isArray(config.tiers)) {
+      return null;
     }
 
-    // Handle array of compressed tiers
-    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].min !== undefined) {
-      return parsed.map(normalizeCompressedTier).sort(sortByMinQuantity);
-    }
-
-    // Handle standard format
-    if (parsed.tiers && Array.isArray(parsed.tiers)) {
-      return parsed.tiers.sort(sortByMinQuantity);
-    }
-
-    // Handle direct array
-    if (Array.isArray(parsed)) {
-      return parsed.sort(sortByMinQuantity);
-    }
-
-    return null;
+    return {
+      tiers: config.tiers,
+      productIds: config.productIds || [],
+      collectionIds: config.collectionIds || [],
+      allProducts: config.allProducts || false,
+    };
   } catch {
     return null;
   }
 }
 
 /**
- * Convert compressed tier to standard format
- * @param {CompressedTier} ct
- * @returns {Tier}
+ * Check if a product matches the discount conditions
+ * @param {string} productId
+ * @param {DiscountConfig} config
+ * @returns {boolean}
  */
-function normalizeCompressedTier(ct) {
-  return {
-    minQuantity: ct.min,
-    maxQuantity: ct.max,
-    discountType: /** @type {"PERCENTAGE" | "FIXED_AMOUNT" | "FIXED_PRICE"} */ (ct.vt),
-    discountValue: ct.v,
-    message: ct.m,
-  };
-}
+function productMatchesConfig(productId, config) {
+  // If allProducts is true, match everything
+  if (config.allProducts) {
+    return true;
+  }
 
-/**
- * Sort comparator for tiers
- * @param {Tier} a
- * @param {Tier} b
- * @returns {number}
- */
-function sortByMinQuantity(a, b) {
-  return a.minQuantity - b.minQuantity;
+  // Check if product ID is in the list
+  if (config.productIds && config.productIds.length > 0) {
+    return config.productIds.includes(productId);
+  }
+
+  // Note: Collection matching would require additional data in the query
+  // For now, if no specific products are set and allProducts is false, no match
+  return false;
 }
 
 // ============================================================================
@@ -175,6 +121,14 @@ function sortByMinQuantity(a, b) {
  * @returns {FunctionRunResult}
  */
 export function run(input) {
+  // Get configuration from discount metafield
+  const metafieldValue = input?.discountNode?.metafield?.value;
+  const config = parseConfig(metafieldValue);
+
+  if (!config) {
+    return EMPTY_DISCOUNT;
+  }
+
   const cart = input?.cart;
 
   // Early exit for empty cart
@@ -182,15 +136,11 @@ export function run(input) {
     return EMPTY_DISCOUNT;
   }
 
-  /** @type {Map<string, ProductGroup>} */
+  // Group cart lines by product and calculate quantities
+  /** @type {Map<string, {lines: Array<{id: string, quantity: number}>, totalQuantity: number}>} */
   const productGroups = new Map();
 
-  // Single pass: group cart lines by product
-  const lines = cart.lines;
-  const lineCount = lines.length;
-
-  for (let i = 0; i < lineCount; i++) {
-    const line = lines[i];
+  for (const line of cart.lines) {
     const merchandise = line.merchandise;
 
     // Only process ProductVariant merchandise
@@ -201,31 +151,23 @@ export function run(input) {
     const product = merchandise.product;
     if (!product) continue;
 
-    // Check for tiered pricing eligibility
-    const hasTag = product.hasAnyTag;
-    const metafieldValue = product.metafield?.value;
+    const productId = product.id;
 
-    if (!hasTag && !metafieldValue) {
+    // Check if product matches discount conditions
+    if (!productMatchesConfig(productId, config)) {
       continue;
     }
 
-    const productId = product.id;
     let group = productGroups.get(productId);
 
     if (!group) {
-      // Parse tiers only once per product
-      const tiers = metafieldValue ? parseTiers(metafieldValue) : null;
-      if (!tiers) continue;
-
       group = {
         lines: [],
         totalQuantity: 0,
-        tiers: tiers,
       };
       productGroups.set(productId, group);
     }
 
-    // Add line to group
     group.lines.push({
       id: line.id,
       quantity: line.quantity,
@@ -233,55 +175,50 @@ export function run(input) {
     group.totalQuantity += line.quantity;
   }
 
-  // Early exit if no products with tiered pricing
+  // Early exit if no matching products
   if (productGroups.size === 0) {
     return EMPTY_DISCOUNT;
   }
 
-  // Process groups and build discounts
+  // Build discounts for each product group
   /** @type {Discount[]} */
   const discounts = [];
 
-  for (const group of productGroups.values()) {
-    const tier = findApplicableTier(group.tiers, group.totalQuantity);
-    if (!tier) continue;
+  for (const [productId, group] of productGroups) {
+    const tier = findApplicableTier(config.tiers, group.totalQuantity);
 
-    // Build targets array
-    const groupLines = group.lines;
-    const targetCount = groupLines.length;
-    /** @type {Target[]} */
-    const targets = new Array(targetCount);
-
-    for (let i = 0; i < targetCount; i++) {
-      targets[i] = { cartLine: { id: groupLines[i].id } };
+    if (!tier) {
+      continue; // Quantity doesn't meet any tier
     }
 
-    // Create discount based on type
-    const discountValue = tier.discountValue;
-    const totalQty = group.totalQuantity;
+    // Build targets
+    /** @type {Target[]} */
+    const targets = group.lines.map((line) => ({
+      cartLine: { id: line.id },
+    }));
 
-    if (tier.discountType === "PERCENTAGE") {
+    // Create discount based on type
+    if (tier.valueType === "PERCENTAGE") {
       discounts.push({
         targets,
         value: {
           percentage: {
-            value: String(discountValue),
+            value: String(tier.value),
           },
         },
-        message: tier.message || `${discountValue}% off for buying ${totalQty}+ items`,
+        message: `${tier.value}% volume discount (${group.totalQuantity} items)`,
       });
-    } else if (tier.discountType === "FIXED_AMOUNT") {
+    } else if (tier.valueType === "FIXED_AMOUNT") {
       discounts.push({
         targets,
         value: {
           fixedAmount: {
-            amount: String(discountValue),
+            amount: String(tier.value),
           },
         },
-        message: tier.message || `$${discountValue} off for buying ${totalQty}+ items`,
+        message: `Volume discount (${group.totalQuantity} items)`,
       });
     }
-    // Note: FIXED_PRICE requires price data for calculation
   }
 
   if (discounts.length === 0) {

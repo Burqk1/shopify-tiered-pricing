@@ -9,10 +9,6 @@ query RunInput {
           id
           product {
             id
-            hasAnyTag(tags: ["tiered-discount"])
-            metafield(namespace: "tiered_pricing", key: "tiers") {
-              value
-            }
           }
         }
       }

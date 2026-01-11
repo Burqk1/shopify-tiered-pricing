@@ -37,6 +37,37 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   const rules = await getActiveRulesForSync(shop.id);
 
+  // Get app's discount functions
+  const functionsResponse = await admin.graphql(`
+    query {
+      app {
+        installation {
+          id
+        }
+      }
+      shopifyFunctions(first: 10) {
+        nodes {
+          id
+          title
+          apiType
+          app {
+            title
+          }
+        }
+      }
+    }
+  `);
+
+  const functionsData = await functionsResponse.json();
+
+  // Find our tiered-discount function
+  const functions = functionsData.data?.shopifyFunctions?.nodes || [];
+  const tieredDiscountFunction = functions.find(
+    (f: { apiType: string; app?: { title: string } }) =>
+      f.apiType === "product_discounts" &&
+      f.app?.title === "Tiered Pricing Pro"
+  );
+
   // Get existing automatic discounts to show
   const response = await admin.graphql(`
     query {
@@ -59,6 +90,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({
     rules: rules.map((r) => ({ id: r.id, name: r.name })),
     existingDiscounts: data.data?.discountNodes?.nodes || [],
+    functionId: tieredDiscountFunction?.id || null,
   });
 };
 
@@ -68,9 +100,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const title = formData.get("title") as string;
   const ruleId = formData.get("ruleId") as string;
+  const functionId = formData.get("functionId") as string;
 
   if (!title || !ruleId) {
     return json({ error: "Title and rule are required" }, { status: 400 });
+  }
+
+  if (!functionId) {
+    return json({ error: "Discount function not found. Please redeploy the app." }, { status: 400 });
   }
 
   // Get the rule details
@@ -121,12 +158,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       variables: {
         automaticAppDiscount: {
           title,
-          functionId: process.env.SHOPIFY_TIERED_DISCOUNT_FUNCTION_ID,
+          functionId,
           startsAt: new Date().toISOString(),
           metafields: [
             {
-              namespace: "tiered-pricing",
-              key: "config",
+              namespace: "$app:tiered-discount",
+              key: "function-configuration",
               type: "json",
               value: JSON.stringify(config),
             },
@@ -151,7 +188,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function NewDiscount() {
-  const { rules, existingDiscounts } = useLoaderData<typeof loader>();
+  const { rules, existingDiscounts, functionId } = useLoaderData<typeof loader>();
   const submit = useSubmit();
   const navigation = useNavigation();
 
@@ -169,6 +206,9 @@ export default function NewDiscount() {
     const formData = new FormData();
     formData.append("title", title);
     formData.append("ruleId", selectedRule);
+    if (functionId) {
+      formData.append("functionId", functionId);
+    }
     submit(formData, { method: "post" });
   };
 
@@ -178,6 +218,15 @@ export default function NewDiscount() {
       backAction={{ content: "Home", url: "/app" }}
     >
       <BlockStack gap="400">
+{!functionId && (
+          <Banner tone="critical">
+            <p>
+              Discount function not found. The app needs to be redeployed.
+              Please contact support if this issue persists.
+            </p>
+          </Banner>
+        )}
+
         <Banner tone="info">
           <p>
             This will create an automatic discount that applies your tiered
@@ -220,7 +269,7 @@ export default function NewDiscount() {
                 variant="primary"
                 onClick={handleSubmit}
                 loading={isLoading}
-                disabled={!title || !selectedRule}
+                disabled={!title || !selectedRule || !functionId}
               >
                 Create Discount
               </Button>
