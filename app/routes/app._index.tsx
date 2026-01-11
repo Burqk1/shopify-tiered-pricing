@@ -452,7 +452,7 @@ export default function Dashboard() {
                     <Icon source={StarFilledIcon} tone="magic" />
                   </Box>
                 </InlineStack>
-                <Text variant="heading2xl" as="p">
+                <Text variant="headingLg" as="p">
                   {shop.plan}
                 </Text>
                 <Button variant="plain" onClick={() => navigate("/app/settings")} icon={ArrowRightIcon}>
