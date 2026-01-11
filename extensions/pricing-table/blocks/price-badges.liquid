@@ -1,0 +1,310 @@
+{% comment %}
+  Tiered Pricing Badges Block
+  Compact discount badges shown below the price
+
+  Example output:
+  Buy 5+ → 10% OFF | Buy 10+ → 20% OFF | Buy 25+ → 30% OFF
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "Volume Discount Badges",
+  "target": "section",
+  "templates": ["product"],
+  "settings": [
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "Badge Color",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#065f46"
+    },
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "options": [
+        { "value": "pills", "label": "Pills" },
+        { "value": "inline", "label": "Inline Text" },
+        { "value": "stacked", "label": "Stacked" }
+      ],
+      "default": "pills"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_savings",
+      "label": "Show Savings Amount",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_powered_by",
+      "label": "Show Powered By",
+      "default": true,
+      "info": "Required for free plan"
+    }
+  ]
+}
+{% endschema %}
+
+<div
+  class="tier-badges-container tier-badges-{{ block.settings.style }}"
+  id="tier-badges-{{ block.id }}"
+  data-product-gid="gid://shopify/Product/{{ product.id }}"
+  data-base-price="{{ product.selected_or_first_available_variant.price | money_without_currency | replace: ',', '' }}"
+  data-currency-symbol="{{ cart.currency.symbol }}"
+  style="display: none;"
+>
+  <div class="tier-badges-list" id="tier-badges-list-{{ block.id }}">
+    <!-- Populated by JavaScript -->
+  </div>
+
+  {%- if block.settings.show_powered_by -%}
+    <span class="tier-badges-powered">
+      <a href="https://apps.shopify.com/tiered-pricing" target="_blank" rel="noopener">Tiered Pricing</a>
+    </span>
+  {%- endif -%}
+</div>
+
+<style>
+  .tier-badges-container {
+    margin: 12px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  .tier-badges-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Pills Style */
+  .tier-badges-pills .tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, {{ block.settings.badge_color }}15 0%, {{ block.settings.badge_color }}25 100%);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: {{ block.settings.text_color }};
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid {{ block.settings.badge_color }}30;
+  }
+
+  .tier-badges-pills .tier-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px {{ block.settings.badge_color }}25;
+  }
+
+  .tier-badges-pills .tier-badge-qty {
+    font-weight: 500;
+  }
+
+  .tier-badges-pills .tier-badge-discount {
+    font-weight: 700;
+    color: {{ block.settings.badge_color }};
+  }
+
+  .tier-badges-pills .tier-badge-arrow {
+    color: {{ block.settings.badge_color }}80;
+    font-size: 0.7rem;
+  }
+
+  /* Inline Style */
+  .tier-badges-inline .tier-badges-list {
+    gap: 4px;
+  }
+
+  .tier-badges-inline .tier-badge {
+    font-size: 0.85rem;
+    color: #6b7280;
+  }
+
+  .tier-badges-inline .tier-badge-qty {
+    color: #374151;
+    font-weight: 500;
+  }
+
+  .tier-badges-inline .tier-badge-discount {
+    color: {{ block.settings.badge_color }};
+    font-weight: 600;
+  }
+
+  .tier-badges-inline .tier-badge-separator {
+    color: #d1d5db;
+    margin: 0 4px;
+  }
+
+  /* Stacked Style */
+  .tier-badges-stacked .tier-badges-list {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .tier-badges-stacked .tier-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #4b5563;
+  }
+
+  .tier-badges-stacked .tier-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: {{ block.settings.badge_color }};
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tier-badges-stacked .tier-badge-discount {
+    color: {{ block.settings.badge_color }};
+    font-weight: 600;
+  }
+
+  .tier-badges-stacked .tier-badge-savings {
+    color: #9ca3af;
+    font-size: 0.75rem;
+  }
+
+  /* Powered by */
+  .tier-badges-powered {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.65rem;
+    color: #c4c4c4;
+  }
+
+  .tier-badges-powered a {
+    color: #a3a3a3;
+    text-decoration: none;
+  }
+
+  .tier-badges-powered a:hover {
+    color: #737373;
+  }
+
+  /* Best deal highlight */
+  .tier-badge.best-deal {
+    background: linear-gradient(135deg, {{ block.settings.badge_color }} 0%, {{ block.settings.badge_color }}dd 100%);
+    color: white;
+    border-color: {{ block.settings.badge_color }};
+  }
+
+  .tier-badge.best-deal .tier-badge-discount,
+  .tier-badge.best-deal .tier-badge-qty,
+  .tier-badge.best-deal .tier-badge-arrow {
+    color: white;
+  }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .tier-badges-pills .tier-badge {
+      padding: 5px 10px;
+      font-size: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+(function() {
+  const blockId = '{{ block.id }}';
+  const productGid = 'gid://shopify/Product/{{ product.id }}';
+  const basePrice = parseFloat('{{ product.selected_or_first_available_variant.price | money_without_currency | replace: ",", "" }}');
+  const currencySymbol = '{{ cart.currency.symbol }}';
+  const style = '{{ block.settings.style }}';
+  const showSavings = {{ block.settings.show_savings | json }};
+
+  const container = document.getElementById('tier-badges-' + blockId);
+  const listEl = document.getElementById('tier-badges-list-' + blockId);
+
+  async function fetchTiers() {
+    try {
+      const response = await fetch('/apps/tiered-pricing/product-tiers?product_id=' + encodeURIComponent(productGid), {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.tiers || [];
+    } catch (e) {
+      console.error('Tier badges: Failed to fetch', e);
+      return [];
+    }
+  }
+
+  function renderBadges(tiers) {
+    if (!tiers || tiers.length === 0) return;
+
+    // Find best deal
+    let bestIndex = 0;
+    let maxDiscount = 0;
+    tiers.forEach((t, i) => {
+      const d = t.valueType === 'PERCENTAGE' ? t.value : (t.value / basePrice * 100);
+      if (d > maxDiscount) { maxDiscount = d; bestIndex = i; }
+    });
+
+    listEl.innerHTML = '';
+
+    tiers.forEach((tier, index) => {
+      const minQty = parseInt(tier.min, 10) || 0;
+      const tierValue = parseFloat(tier.value) || 0;
+      const isPercentage = tier.valueType === 'PERCENTAGE';
+      const isBest = index === bestIndex && tiers.length > 1;
+
+      const discountText = isPercentage ? tierValue + '%' : currencySymbol + tierValue.toFixed(0);
+
+      let unitPrice = basePrice;
+      if (isPercentage) {
+        unitPrice = basePrice * (1 - tierValue / 100);
+      } else {
+        unitPrice = basePrice - tierValue;
+      }
+      const savings = (basePrice - unitPrice).toFixed(2);
+
+      const badge = document.createElement('span');
+      badge.className = 'tier-badge' + (isBest ? ' best-deal' : '');
+
+      if (style === 'pills') {
+        badge.innerHTML =
+          '<span class="tier-badge-qty">' + minQty + '+</span>' +
+          '<span class="tier-badge-arrow">→</span>' +
+          '<span class="tier-badge-discount">' + discountText + ' OFF</span>';
+      } else if (style === 'inline') {
+        badge.innerHTML =
+          '<span class="tier-badge-qty">' + minQty + '+ adet</span> ' +
+          '<span class="tier-badge-discount">' + discountText + ' indirim</span>';
+        if (index < tiers.length - 1) {
+          const sep = document.createElement('span');
+          sep.className = 'tier-badge-separator';
+          sep.textContent = '|';
+          listEl.appendChild(badge);
+          listEl.appendChild(sep);
+          return;
+        }
+      } else if (style === 'stacked') {
+        let html = '<span class="tier-badge-qty">' + minQty + '+ adet alırsan</span> ' +
+          '<span class="tier-badge-discount">' + discountText + ' indirim</span>';
+        if (showSavings) {
+          html += ' <span class="tier-badge-savings">(Kazanç: ' + currencySymbol + savings + ')</span>';
+        }
+        badge.innerHTML = html;
+      }
+
+      listEl.appendChild(badge);
+    });
+
+    container.style.display = 'block';
+  }
+
+  fetchTiers().then(renderBadges);
+})();
+</script>
