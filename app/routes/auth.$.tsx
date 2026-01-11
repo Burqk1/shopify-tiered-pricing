@@ -6,12 +6,18 @@
  */
 
 import type { LoaderFunctionArgs } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // authenticate.admin will handle the OAuth callback and redirect appropriately
-  await authenticate.admin(request);
+  // authenticate.admin will handle the OAuth callback
+  const { session } = await authenticate.admin(request);
 
-  // This return should not be reached as authenticate.admin redirects on success
-  return new Response(null, { status: 200 });
+  // After successful authentication, redirect to app UI
+  if (session?.shop) {
+    return redirect(`/app?shop=${session.shop}`);
+  }
+
+  // Fallback redirect to app
+  return redirect("/app");
 };
