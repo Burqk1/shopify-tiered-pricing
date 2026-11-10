@@ -66,10 +66,10 @@ The discount function and POS extension have their own `package.json` files unde
 |---|---|
 | `SHOPIFY_API_KEY` | App API key |
 | `SHOPIFY_API_SECRET` | App secret, also used to verify app proxy signatures |
-| `SHOPIFY_APP_URL` | Public app URL (falls back to `HOST`). Note: `.env.example` calls this `APP_URL`, but the code reads `SHOPIFY_APP_URL`. |
+| `SHOPIFY_APP_URL` | Public app URL (falls back to `HOST`). |
 | `SCOPES` | Comma-separated scopes. Defaults in code match `shopify.app.toml`: `write_products,read_products,write_discounts,read_discounts,write_customers,read_customers,read_metaobjects,write_metaobjects` |
 | `DATABASE_URL` | PostgreSQL connection string. `db.server.ts` also accepts `DATABASE_POSTGRES_PRISMA_URL`, `DATABASE_POSTGRES_URL`, `POSTGRES_PRISMA_URL`, `POSTGRES_URL` or `DATABASE_URL_UNPOOLED` (Vercel/Neon style names). |
-| `CRON_SECRET` | Protects `/api/cron/analytics-sync`. Falls back to a placeholder string if unset, so set it in production. |
+| `CRON_SECRET` | Protects `/api/cron/analytics-sync`. Required: if it is unset, the endpoint returns 503 and does not run. |
 | `SHOP_CUSTOM_DOMAIN` | Optional custom shop domain |
 | `LOG_LEVEL` | Optional, default `info` |
 | `NODE_ENV` | `production` enables app proxy signature checks and real (non-test) billing charges |

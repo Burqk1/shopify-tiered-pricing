@@ -18,8 +18,9 @@ import { processAutoApply } from "~/services/auto-apply.server";
 import { runScheduledCompetitorSync } from "~/services/competitor-sync.server";
 import { authenticate } from "~/shopify.server";
 
-// Secret key for cron authentication (set in environment variables)
-const CRON_SECRET = process.env.CRON_SECRET || "your-secret-key-change-in-production";
+// Secret key for cron authentication (set in environment variables).
+// There is no fallback: if it is unset, the endpoint refuses to run.
+const CRON_SECRET = process.env.CRON_SECRET;
 
 // Batch size for processing shops (prevents timeout on large scale)
 const BATCH_SIZE = 10;
@@ -29,6 +30,8 @@ const BATCH_DELAY_MS = 1000; // Delay between batches to prevent rate limiting
  * Verify cron request authenticity
  */
 function verifyCronAuth(request: Request): boolean {
+  if (!CRON_SECRET) return false;
+
   const authHeader = request.headers.get("Authorization");
   const cronSecret = request.headers.get("X-Cron-Secret");
 
@@ -36,13 +39,8 @@ function verifyCronAuth(request: Request): boolean {
   if (authHeader === `Bearer ${CRON_SECRET}`) return true;
   if (cronSecret === CRON_SECRET) return true;
 
-  // Also allow Vercel Cron format
-  const vercelCronSignature = request.headers.get("x-vercel-cron-signature");
-  if (vercelCronSignature) {
-    // Vercel Cron automatically includes this header when configured
-    return true;
-  }
-
+  // Vercel Cron sends "Authorization: Bearer $CRON_SECRET" when CRON_SECRET
+  // is set in the project, so it is covered by the Bearer check above.
   return false;
 }
 
@@ -61,8 +59,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 
   // For manual trigger, require auth
+  if (!CRON_SECRET) {
+    console.error("[Cron] CRON_SECRET is not set; refusing to run analytics sync");
+    return json({ error: "CRON_SECRET is not configured" }, { status: 503 });
+  }
+
   if (!verifyCronAuth(request)) {
     return json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Vercel Cron invokes the path with GET; run the daily sync for it.
+  if (request.headers.get("user-agent")?.startsWith("vercel-cron")) {
+    return action({ request } as ActionFunctionArgs);
   }
 
   // Return instructions
@@ -82,6 +90,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
  */
 export async function action({ request }: ActionFunctionArgs) {
   // Verify authentication
+  if (!CRON_SECRET) {
+    console.error("[Cron] CRON_SECRET is not set; refusing to run analytics sync");
+    return json({ error: "CRON_SECRET is not configured" }, { status: 503 });
+  }
+
   if (!verifyCronAuth(request)) {
     return json({ error: "Unauthorized" }, { status: 401 });
   }
